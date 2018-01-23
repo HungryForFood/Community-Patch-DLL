@@ -567,6 +567,11 @@ protected:
 	static int lGetCultureBonusTurns(lua_State* L);
 	static int lGetTourismBonusTurns(lua_State* L);
 
+#if defined(MOD_BALANCE_CORE)
+	static int lGetCombatModifierOnWarTurns(lua_State* L);
+	static int lGetCombatModifierOnWarModifier(lua_State* L);
+#endif
+
 	static int lGetGoldenAgeProgressThreshold(lua_State* L);
 	static int lGetGoldenAgeProgressMeter(lua_State* L);
 	static int lSetGoldenAgeProgressMeter(lua_State* L);

@@ -1,5 +1,6 @@
+
 /*	-------------------------------------------------------------------------------------------------------
-	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
+	Â© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
 	and their respective logos are all trademarks of Take-Two interactive Software, Inc.  
 	All other marks and trademarks are the property of their respective owners.  
@@ -294,6 +295,10 @@ CvTraitEntry::CvTraitEntry() :
 #if defined(MOD_BALANCE_CORE)
 	m_piGoldenAgeFromGreatPersonBirth(NULL),
 #endif
+#endif
+#if defined(MOD_BALANCE_CORE)
+	m_iCombatModifierOnWarModifier(0),
+	m_iCombatModifierOnWarTurns(0),
 #endif
 	m_ppiUnimprovedFeatureYieldChanges(NULL)
 {
@@ -1936,6 +1941,16 @@ bool CvTraitEntry::TerrainClaimBoost(TerrainTypes eTerrain)
 		return false;
 	}
 }
+
+int CvTraitEntry::GetCombatModifierOnWarModifier() const
+{
+	return m_iCombatModifierOnWarModifier;
+}
+
+int CvTraitEntry::GetCombatModifierOnWarTurns() const
+{
+	return m_iCombatModifierOnWarTurns;
+}
 #endif
 
 /// Load XML data
@@ -2892,6 +2907,28 @@ bool CvTraitEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility& 
 			m_aFreeResourceXCities[iResource] = temp;
 		}
 	}
+
+#if defined(MOD_BALANCE_CORE)
+	//CombatModifierOnWar
+	{
+		std::string strKey = "Trait_CombatModifierOnWar";
+		Database::Results* pResults = kUtility.GetResults(strKey);
+		if(pResults == NULL)
+		{
+			pResults = kUtility.PrepareResults(strKey, "select Modifier, Turns from Trait_CombatModifierOnWar where TraitType = ?");
+		}
+
+		pResults->Bind(1, szTraitType);
+
+		while(pResults->Step())
+		{
+			m_iCombatModifierOnWarModifier = pResults->GetInt("Modifier");
+			m_iCombatModifierOnWarTurns = pResults->GetInt("Turns");
+		}
+
+		pResults->Reset();
+	}
+#endif
 
 	return true;
 }
@@ -3880,6 +3917,10 @@ void CvPlayerTraits::InitPlayerTraits()
 					m_aFreeResourceXCities[iResourceLoop] = temp;
 				}
 			}
+#if defined(MOD_BALANCE_CORE)
+			m_iCombatModifierOnWarModifier += trait->GetCombatModifierOnWarModifier();
+			m_iCombatModifierOnWarTurns += trait->GetCombatModifierOnWarTurns();
+#endif
 		}
 	}
 }
@@ -4365,6 +4406,10 @@ void CvPlayerTraits::Reset()
 		FreeResourceXCities temp;
 		m_aFreeResourceXCities.push_back(temp);
 	}
+#if defined(MOD_BALANCE_CORE)
+	m_iCombatModifierOnWarModifier = 0;
+	m_iCombatModifierOnWarTurns = 0;
+#endif
 }
 
 /// Does this player possess a specific trait?
@@ -6354,6 +6399,8 @@ void CvPlayerTraits::Read(FDataStream& kStream)
 	MOD_SERIALIZE_READ(66, kStream, m_iFaithCostModifier, 0);
 	MOD_SERIALIZE_READ(88, kStream, m_iVotePerXCSFollowingFollowingYourReligion, 0);
 	MOD_SERIALIZE_READ(88, kStream, m_iChanceToConvertReligiousUnits, 0);
+	MOD_SERIALIZE_READ(88, kStream, m_iCombatModifierOnWarModifier, 0);
+	MOD_SERIALIZE_READ(88, kStream, m_iCombatModifierOnWarTurns, 0);
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	// MOD_SERIALIZE_READ - v57/v58/v59 and v61 broke the save format  couldn't be helped, but don't make a habit of it!!!
@@ -6768,6 +6815,10 @@ void CvPlayerTraits::Write(FDataStream& kStream)
 	{
 		kStream << m_aUniqueLuxuryAreas[iI];
 	}
+#if defined(MOD_BALANCE_CORE)
+	MOD_SERIALIZE_WRITE(kStream, m_iCombatModifierOnWarModifier);
+	MOD_SERIALIZE_WRITE(kStream, m_iCombatModifierOnWarTurns);
+#endif
 }
 
 // PRIVATE METHODS

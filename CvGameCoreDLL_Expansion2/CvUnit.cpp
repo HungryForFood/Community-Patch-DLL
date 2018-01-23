@@ -1,5 +1,5 @@
-﻿/*	-------------------------------------------------------------------------------------------------------
-	� 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
+/*	-------------------------------------------------------------------------------------------------------
+	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
 	and their respective logos are all trademarks of Take-Two interactive Software, Inc.  
 	All other marks and trademarks are the property of their respective owners.  
@@ -15371,6 +15371,9 @@ int CvUnit::GetGenericMaxStrengthModifier(const CvUnit* pOtherUnit, const CvPlot
 
 	int iModifier = 0;
 	int iTempModifier;
+#if defined(MOD_BALANCE_CORE)
+	int iTurns = 0;
+#endif
 
 	// Generic combat bonus
 	iTempModifier = getExtraCombatPercent();
@@ -15565,6 +15568,21 @@ int CvUnit::GetGenericMaxStrengthModifier(const CvUnit* pOtherUnit, const CvPlot
 			if(pBattlePlot->isCity() && pBattlePlot->getOwner()!=NO_PLAYER && GET_PLAYER(pBattlePlot->getOwner()).isMajorCiv())
 			{
 				if(kPlayer.isGoldenAge())
+				{
+					iModifier += kPlayer.GetPlayerTraits()->GetConquestOfTheWorldCityAttack();
+				}
+				// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a city)
+				iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pBattlePlot->getOwner()).GetID());
+				if (iTurns > 0 && !(GET_PLAYER(pBattlePlot->getOwner()).isMinorCiv()) && !(GET_PLAYER(pBattlePlot->getOwner()).isBarbarian()))
+				{
+					iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
+					iModifier += iTempModifier;
+				}
+			}
+
+			if (pBattlePlot->isCity() && pBattlePlot->getOwner() != NO_PLAYER && GET_PLAYER(pBattlePlot->getOwner()).isMajorCiv())
+			{
+				if (kPlayer.isGoldenAge())
 				{
 					iModifier += kPlayer.GetPlayerTraits()->GetConquestOfTheWorldCityAttack();
 				}
@@ -15796,6 +15814,16 @@ int CvUnit::GetGenericMaxStrengthModifier(const CvUnit* pOtherUnit, const CvPlot
 				iModifier += iTempModifier;
 			}
 		}
+
+#if defined(MOD_BALANCE_CORE)
+		// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a unit)
+		iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pOtherUnit->getOwner()).GetID());
+		if (iTurns > 0 && !(GET_PLAYER(pOtherUnit->getOwner()).isMinorCiv()) && !(pOtherUnit->isBarbarian()))
+		{
+			iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
+			iModifier += iTempModifier;
+		}
+#endif
 	}
 
 	return iModifier;
@@ -16331,6 +16359,9 @@ int CvUnit::GetMaxRangedCombatStrength(const CvUnit* pOtherUnit, const CvCity* p
 	
 	int iModifier;
 	int iTempModifier;
+#if defined(MOD_BALANCE_CORE)
+	int iTurns = 0;
+#endif
 
 	CvPlayerAI& kPlayer = GET_PLAYER(getOwner());
 	CvPlayerTraits* pTraits = kPlayer.GetPlayerTraits();
@@ -16623,6 +16654,15 @@ int CvUnit::GetMaxRangedCombatStrength(const CvUnit* pOtherUnit, const CvCity* p
 			// Unit Class Defense Mod
 			iModifier += unitClassDefenseModifier(pOtherUnit->getUnitClassType());
 		}
+#if defined(MOD_BALANCE_CORE)
+		// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a unit)
+		iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pOtherUnit->getOwner()).GetID());
+		if (iTurns > 0 && !(GET_PLAYER(pOtherUnit->getOwner()).isMinorCiv()) && !(pOtherUnit->isBarbarian()))
+		{
+			iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
+			iModifier += iTempModifier;
+		}
+#endif
 	}
 
 	////////////////////////
@@ -16671,6 +16711,13 @@ int CvUnit::GetMaxRangedCombatStrength(const CvUnit* pOtherUnit, const CvCity* p
 			if(kPlayer.isGoldenAge())
 			{
 				iModifier += pTraits->GetConquestOfTheWorldCityAttack();
+			}
+			// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a city)
+			iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pCity->getOwner()).GetID());
+			if (iTurns > 0 && !(GET_PLAYER(pCity->getOwner()).isMinorCiv()) && !(GET_PLAYER(pCity->getOwner()).isBarbarian()))
+			{
+				iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
+				iModifier += iTempModifier;
 			}
 		}
 #endif

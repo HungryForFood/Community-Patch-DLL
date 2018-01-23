@@ -1,5 +1,5 @@
 /*	-------------------------------------------------------------------------------------------------------
-	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
+	Â© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
 	and their respective logos are all trademarks of Take-Two interactive Software, Inc.  
 	All other marks and trademarks are the property of their respective owners.  
@@ -324,6 +324,8 @@ public:
 	int GetFreePolicyPerXTechs() const;
 	EraTypes GetGPFaithPurchaseEra() const;
 	int GetFaithCostModifier() const;
+	int GetCombatModifierOnWarModifier() const;
+	int GetCombatModifierOnWarTurns() const;
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	int GetBuildingClassYieldChanges(BuildingClassTypes eIndex1, YieldTypes eIndex2) const;
@@ -644,6 +646,8 @@ protected:
 	int* m_piNumPledgesDomainProdMod;
 	int* m_piDomainFreeExperienceModifier;
 	int* m_piFreeUnitClassesDOW;
+	int m_iCombatModifierOnWarModifier;
+	int m_iCombatModifierOnWarTurns;
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	int** m_ppiBuildingClassYieldChanges;
@@ -1636,6 +1640,14 @@ public:
 	{
 		return m_iMountainRangeYield[(int)eYield];
 	};
+	int GetCombatModifierOnWarModifier() const
+	{
+		return m_iCombatModifierOnWarModifier;
+	};
+	int GetCombatModifierOnWarTurns() const
+	{
+		return m_iCombatModifierOnWarTurns;
+	};
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	int GetBuildingClassYieldChange(BuildingClassTypes eBuildingClass, YieldTypes eYield) const;
@@ -2053,6 +2065,8 @@ private:
 	bool m_bCombatBoostNearNaturalWonder;
 	int m_iCultureBonusModifierConquest;
 	int m_iProductionBonusModifierConquest;
+	int m_iCombatModifierOnWarModifier;
+	int m_iCombatModifierOnWarTurns;
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	std::vector< Firaxis::Array<int, NUM_YIELD_TYPES > > m_ppiBuildingClassYieldChange;

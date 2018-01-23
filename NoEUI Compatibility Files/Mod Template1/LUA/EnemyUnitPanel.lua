@@ -705,6 +705,17 @@ function UpdateCombatOddsUnitVsCity(pMyUnit, pCity)
 				controlTable.Value:SetText( GetFormattedText(strText, iModifier, true, true) );
 			end
 
+-- CBP
+			-- Combat modifier on war (trait)
+			local iTurns = pMyPlayer:GetCombatModifierOnWarTurns(iTheirPlayer);
+			if (iTurns > 0) then
+				iModifier = pMyPlayer:GetCombatModifierOnWarModifier();
+				controlTable = g_MyCombatDataIM:GetInstance();
+				controlTable.Text:LocalizeAndSetText( "TXT_KEY_EUPANEL_BONUS_ON_WAR", iTurns );
+				controlTable.Value:SetText( GetFormattedText(strText, iModifier, true, true) );
+			end
+-- END
+
 			---------------------------
 			-- AIR INTERCEPT PREVIEW --
 			---------------------------
@@ -1038,6 +1049,17 @@ function UpdateCombatOddsUnitVsUnit(pMyUnit, pTheirUnit)
 				controlTable.Text:LocalizeAndSetText( "TXT_KEY_EUPANEL_POLICY_ATTACK_BONUS", iTurns );
 				controlTable.Value:SetText( GetFormattedText(strText, iModifier, true, true) );
 			end
+
+-- CBP
+			-- Combat modifier on war (trait)
+			local iTurns = pMyPlayer:GetCombatModifierOnWarTurns(iTheirPlayer);
+			if (iTurns > 0) then
+				iModifier = pMyPlayer:GetCombatModifierOnWarModifier();
+				controlTable = g_MyCombatDataIM:GetInstance();
+				controlTable.Text:LocalizeAndSetText( "TXT_KEY_EUPANEL_BONUS_ON_WAR", iTurns );
+				controlTable.Value:SetText( GetFormattedText(strText, iModifier, true, true) );
+			end
+-- END
 			
 			-- Flanking bonus
 			if (not bRanged) then
@@ -1693,6 +1715,17 @@ function UpdateCombatOddsUnitVsUnit(pMyUnit, pTheirUnit)
 					controlTable.Text:LocalizeAndSetText( "TXT_KEY_EUPANEL_UNITCLASS_NEAR" );
 					controlTable.Value:SetText( GetFormattedText(strText, iModifier, true, true) );
 				end
+
+-- CBP
+				-- Combat modifier on war (trait)
+				local iTurns = pTheirPlayer:GetCombatModifierOnWarTurns(iMyPlayer);
+				if (iTurns > 0) then
+					iModifier = pTheirPlayer:GetCombatModifierOnWarModifier();
+					controlTable = g_MyCombatDataIM:GetInstance();
+					controlTable.Text:LocalizeAndSetText( "TXT_KEY_EUPANEL_BONUS_ON_WAR", iTurns );
+					controlTable.Value:SetText( GetFormattedText(strText, iModifier, false, true) );
+				end
+-- END
 				
 				-- Flanking bonus
 				if (not bRanged) then

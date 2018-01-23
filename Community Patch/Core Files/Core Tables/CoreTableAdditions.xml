@@ -745,6 +745,13 @@
 		<Column name="DomainType" type="text" reference="Domains(Type)"/>
 		<Column name="Modifier" type="integer"/>
 	</Table>
+
+	<!-- TRAIT: Grants a combat modifier for the specified number of turns (scales with game speed) when a war starts, no matter who declares first. Bonus applies only to units of that particular civ, so no perma-bonus from constant declarations. -->
+	<Table name="Trait_CombatModifierOnWar">
+		<Column name="TraitType" type="text" reference="Traits(Type)"/>
+		<Column name="Modifier" type="integer" default="0"/>
+		<Column name="Turns" type="integer" default="0"/>
+	</Table>
 	
 	<!-- RESOURCES: Allows Resources to grant bonuses if you control a monopoly of the resource. Must have DEALS functions enabled to use. -->
 	<Table name="Resource_YieldChangeFromMonopoly">

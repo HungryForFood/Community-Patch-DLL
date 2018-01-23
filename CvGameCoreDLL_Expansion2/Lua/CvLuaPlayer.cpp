@@ -504,6 +504,11 @@ void CvLuaPlayer::PushMethods(lua_State* L, int t)
 	Method(GetCultureBonusTurns);
 	Method(GetTourismBonusTurns);
 
+#if defined(MOD_BALANCE_CORE)
+	Method(GetCombatModifierOnWarTurns);
+	Method(GetCombatModifierOnWarModifier);
+#endif
+
 	Method(GetGoldenAgeProgressThreshold);
 	Method(GetGoldenAgeProgressMeter);
 	Method(SetGoldenAgeProgressMeter);
@@ -6709,6 +6714,31 @@ int CvLuaPlayer::lGetTourismBonusTurns(lua_State* L)
 {
 	return BasicLuaMethod(L, &CvPlayerAI::GetTourismBonusTurns);
 }
+
+#if defined(MOD_BALANCE_CORE)
+//------------------------------------------------------------------------------
+//int GetCombatModifierOnWarTurns();
+int CvLuaPlayer::lGetCombatModifierOnWarTurns(lua_State* L)
+{
+	CvPlayerAI* pkPlayer = GetInstance(L);
+	PlayerTypes ePlayer = (PlayerTypes)lua_tointeger(L, 2);
+	const int iResult = pkPlayer->GetCombatModifierOnWarTurns(ePlayer);
+	lua_pushinteger(L, iResult);
+	return 1;
+}
+
+//------------------------------------------------------------------------------
+//int GetCombatModifierOnWarModifier();
+int CvLuaPlayer::lGetCombatModifierOnWarModifier(lua_State* L)
+{
+	CvPlayer* pkPlayer = GetInstance(L);
+	if (pkPlayer)
+	{
+		lua_pushinteger(L, pkPlayer->GetPlayerTraits()->GetCombatModifierOnWarModifier());
+	}
+	return 1;
+}
+#endif
 
 //------------------------------------------------------------------------------
 int CvLuaPlayer::lGetGoldenAgeProgressThreshold(lua_State* L)

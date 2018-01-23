@@ -1,5 +1,5 @@
-﻿/*	-------------------------------------------------------------------------------------------------------
-	� 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
+/*	-------------------------------------------------------------------------------------------------------
+	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
 	and their respective logos are all trademarks of Take-Two interactive Software, Inc.  
 	All other marks and trademarks are the property of their respective owners.  
@@ -183,6 +183,9 @@ CvPlayer::CvPlayer() :
 	, m_iHappinessPerXGreatWorks("CvPlayer::m_iHappinessPerXGreatWorks", m_syncArchive)
 	, m_iAdvancedStartPoints("CvPlayer::m_iAdvancedStartPoints", m_syncArchive)
 	, m_iAttackBonusTurns("CvPlayer::m_iAttackBonusTurns", m_syncArchive)
+#if defined(MOD_BALANCE_CORE)
+	, m_paiCombatModifierOnWarTurns("CvPlayer::m_paiCombatModifierOnWarTurns", m_syncArchive)
+#endif
 	, m_iCultureBonusTurns("CvPlayer::m_iCultureBonusTurns", m_syncArchive)
 	, m_iTourismBonusTurns("CvPlayer::m_iTourismBonusTurns", m_syncArchive)
 	, m_iGoldenAgeProgressMeter("CvPlayer::m_iGoldenAgeProgressMeter", m_syncArchive, true)
@@ -2082,6 +2085,9 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 
 		m_paiBuildingClassCulture.clear();
 		m_paiBuildingClassCulture.resize(GC.getNumBuildingClassInfos(), 0);
+
+		m_paiCombatModifierOnWarTurns.clear();
+		m_paiCombatModifierOnWarTurns.resize(MAX_MAJOR_CIVS, 0);
 #endif
 #if defined(MOD_BALANCE_CORE_RESOURCE_MONOPOLIES)
 		m_pabHasGlobalMonopoly.clear();
@@ -11153,6 +11159,14 @@ void CvPlayer::doTurnPostDiplomacy()
 		ChangeTourismBonusTurns(-1);
 	}
 #if defined(MOD_BALANCE_CORE)
+	for(int iI = 0; iI < MAX_MAJOR_CIVS; iI++)
+	{
+		PlayerTypes ePlayer = (PlayerTypes)iI;
+		if(GetCombatModifierOnWarTurns(ePlayer) > 0) // JJ: Temporary combat bonus from declaration of war
+		{
+			ChangeCombatModifierOnWarTurns(ePlayer, -1);
+		}	
+	}
 	if(GetCultureBonusTurnsConquest() > 0)
 	{
 		ChangeCultureBonusTurnsConquest(-1);
@@ -24085,6 +24099,33 @@ void CvPlayer::ChangeAttackBonusTurns(int iChange)
 		m_iAttackBonusTurns += iChange;
 	}
 }
+
+#if defined(MOD_BALANCE_CORE)
+//	--------------------------------------------------------------------------------
+// Get number of turns of combat modifier from declaration of war
+int CvPlayer::GetCombatModifierOnWarTurns(PlayerTypes ePlayer) const
+{
+	CvAssertMsg((int)ePlayer < MAX_MAJOR_CIVS, "Yield type out of bounds");
+	CvAssertMsg((int)ePlayer > -1, "Index out of bounds");
+	return m_paiCombatModifierOnWarTurns[ePlayer];
+}
+
+//	--------------------------------------------------------------------------------
+// Change number of turns of combat modifier from declaration of war
+void CvPlayer::ChangeCombatModifierOnWarTurns(PlayerTypes ePlayer, int iChange)
+{
+	CvAssertMsg((int)ePlayer < MAX_MAJOR_CIVS, "Yield type out of bounds");
+	CvAssertMsg((int)ePlayer > -1, "Index out of bounds");
+	if(iChange != 0)
+	{
+		m_paiCombatModifierOnWarTurns.setAt(ePlayer, m_paiCombatModifierOnWarTurns[ePlayer] + iChange);
+	}
+
+	GC.GetEngineUserInterface()->setDirty(GameData_DIRTY_BIT, true);
+
+	CvAssert(m_paiCombatModifierOnWarTurns[ePlayer] >= 0);
+}
+#endif
 
 //	--------------------------------------------------------------------------------
 // Get Culture Bonus for a certain period of time

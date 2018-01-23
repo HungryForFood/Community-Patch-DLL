@@ -1,5 +1,5 @@
 /*	-------------------------------------------------------------------------------------------------------
-	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
+	Â© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
 	and their respective logos are all trademarks of Take-Two interactive Software, Inc.  
 	All other marks and trademarks are the property of their respective owners.  
@@ -940,6 +940,9 @@ public:
 	void ChangeCultureBonusTurns(int iChange);
 
 #if defined(MOD_BALANCE_CORE)
+	int GetCombatModifierOnWarTurns(PlayerTypes ePlayer) const;
+	void ChangeCombatModifierOnWarTurns(PlayerTypes ePlayer, int iChange);
+
 	int GetCultureBonusTurnsConquest() const;
 	void ChangeCultureBonusTurnsConquest(int iChange);
 
@@ -3462,6 +3465,7 @@ protected:
 #if defined(MOD_BALANCE_CORE)
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiNumCitiesFreeChosenBuilding;
 	FAutoVariable<std::vector<int>, CvPlayer> m_pabFreeChosenBuildingNewCity;
+	FAutoVariable<std::vector<int>, CvPlayer> m_paiCombatModifierOnWarTurns;
 #endif
 
 	FAutoVariable<std::vector<bool>, CvPlayer> m_pabLoyalMember;
