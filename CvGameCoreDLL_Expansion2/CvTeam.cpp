@@ -7027,7 +7027,7 @@ void CvTeam::setHasTech(TechTypes eIndex, bool bNewValue, PlayerTypes ePlayer, b
 						CvPlayerAI& kPlayer = GET_PLAYER(eLoopPlayer);
 						if(kPlayer.isAlive() && kPlayer.getTeam() == GetID())
 						{
-							kPlayer.doInstantYield(INSTANT_YIELD_TYPE_ERA_UNLOCK, false, NO_GREATPERSON, NO_BUILDING, 0 , false);
+							kPlayer.doInstantYield(INSTANT_YIELD_TYPE_ERA_UNLOCK, false, NO_GREATPERSON, NO_BUILDING, 0 , true);
 						}
 					}
 				}
@@ -7284,7 +7284,7 @@ void CvTeam::setHasTech(TechTypes eIndex, bool bNewValue, PlayerTypes ePlayer, b
 									CvPlayerAI& kPlayer = GET_PLAYER(eLoopPlayer);
 									if(kPlayer.isAlive() && kPlayer.getTeam() == GetID())
 									{
-										kPlayer.doInstantYield(INSTANT_YIELD_TYPE_ERA_UNLOCK, false, NO_GREATPERSON, NO_BUILDING, 0, false);
+										kPlayer.doInstantYield(INSTANT_YIELD_TYPE_ERA_UNLOCK, false, NO_GREATPERSON, NO_BUILDING, 0, true);
 									}
 								}
 							}
@@ -10613,8 +10613,8 @@ void CvTeam::DoBecomeVassal(TeamTypes eTeam, bool bVoluntary)
 //	Are we locked into a war with eOtherTeam because our Master is at war with him?
 bool CvTeam::IsVassalLockedIntoWar(TeamTypes eOtherTeam) const
 {
-	CvAssertMsg(eTeam >= 0, "eIndex is expected to be non-negative (invalid Index)");
-	CvAssertMsg(eTeam < MAX_TEAMS, "eIndex is expected to be within maximum bounds (invalid Index)");
+	CvAssertMsg(eOtherTeam >= 0, "eIndex is expected to be non-negative (invalid Index)");
+	CvAssertMsg(eOtherTeam < MAX_TEAMS, "eIndex is expected to be within maximum bounds (invalid Index)");
 	
 	TeamTypes eLoopTeam;
 	// Go through every major.
@@ -10833,8 +10833,8 @@ bool CvTeam::IsTooSoonForVassal(TeamTypes eTeam) const
 /// How many vassals do we have?
 int CvTeam::GetNumVassals()
 {
-	CvAssertMsg(eTeam >= 0, "eIndex is expected to be non-negative (invalid Index)");
-	CvAssertMsg(eTeam < MAX_TEAMS, "eIndex is expected to be within maximum bounds (invalid Index)");
+	CvAssertMsg(GetID() >= 0, "TeamID is expected to be non-negative (invalid Index)");
+	CvAssertMsg(GetID() < MAX_TEAMS, "TeamID is expected to be within maximum bounds (invalid Index)");
 
 	if(GET_TEAM(GetID()).isMinorCiv() || GET_TEAM(GetID()).isBarbarian())
 		return 0;
@@ -10862,8 +10862,8 @@ int CvTeam::GetNumVassals()
 /// Can we trade this tech?
 bool CvTeam::IsTradeTech(TechTypes eTech) const
 {
-	FAssert(eAward >= 0);
-	FAssert(eAward < GC.getNumTechInfos());
+	FAssert(eTech >= 0);
+	FAssert(eTech < GC.getNumTechInfos());
 
 	return m_pabTradeTech[eTech];
 }
@@ -10871,8 +10871,8 @@ bool CvTeam::IsTradeTech(TechTypes eTech) const
 /// Sets if we can trade this tech
 void CvTeam::SetTradeTech(TechTypes eTech, bool bValue)
 {
-	FAssert(eAward >= 0);
-	FAssert(eAward < GC.getNumTechInfos());
+	FAssert(eTech >= 0);
+	FAssert(eTech < GC.getNumTechInfos());
 
 	m_pabTradeTech[eTech] = bValue;
 }

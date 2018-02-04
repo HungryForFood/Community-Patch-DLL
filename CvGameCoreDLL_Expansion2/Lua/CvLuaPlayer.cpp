@@ -1308,6 +1308,7 @@ void CvLuaPlayer::PushMethods(lua_State* L, int t)
 #endif
 #if defined(MOD_BALANCE_CORE)
 	Method(GetYieldPerTurnFromMinors);
+	Method(SetYieldPerTurnFromMinors);
 	Method(GetScoreFromMinorAllies);
 	Method(GetScoreFromMilitarySize);
 #endif
@@ -12070,6 +12071,7 @@ int CvLuaPlayer::lGetPolicyBuildingClassYieldModifier(lua_State* L)
 	if(pkPlayer)
 	{
 		int modifier = pkPlayer->GetPlayerPolicies()->GetBuildingClassYieldModifier(eBuildingClass, eYieldType);
+		modifier += pkPlayer->GetBuildingClassYieldModifier(eBuildingClass, eYieldType);
 		lua_pushinteger(L, modifier);
 
 		return 1;
@@ -14312,11 +14314,17 @@ int CvLuaPlayer::lGetYieldPerTurnFromMinors(lua_State* L)
 {
 CvPlayerAI* pkPlayer = GetInstance(L);
 	const YieldTypes eYield = (YieldTypes)lua_tointeger(L, 2);
-	CvCity* pkCity = CvLuaCity::GetInstance(L, 3, false);
-	bool bIsCityLevel = pkCity != NULL;
-	bool bIsCapital = bIsCityLevel && pkCity->isCapital();
-	const int iResult = pkPlayer->GetYieldPerTurnFromMinors(eYield, bIsCityLevel, bIsCapital);
+	const int iResult = pkPlayer->GetYieldPerTurnFromMinors(eYield);
 	lua_pushinteger(L, iResult);
+	return 1;
+}
+//-------------------------------------------------------------------------
+int CvLuaPlayer::lSetYieldPerTurnFromMinors(lua_State* L)
+{
+	CvPlayerAI* pkPlayer = GetInstance(L);
+	const YieldTypes eYield = (YieldTypes)lua_tointeger(L, 2);
+	const int iValue = lua_tointeger(L, 3);
+	pkPlayer->SetYieldPerTurnFromMinors(eYield, iValue);
 	return 1;
 }
 //-------------------------------------------------------------------------

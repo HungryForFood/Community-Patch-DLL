@@ -1389,6 +1389,7 @@ protected:
 #endif
 #if defined(MOD_BALANCE_CORE)
 	LUAAPIEXTN(GetYieldPerTurnFromMinors, int);
+	LUAAPIEXTN(SetYieldPerTurnFromMinors, int);
 	LUAAPIEXTN(GetScoreFromMinorAllies, int);
 	LUAAPIEXTN(GetScoreFromMilitarySize, int);
 #endif
