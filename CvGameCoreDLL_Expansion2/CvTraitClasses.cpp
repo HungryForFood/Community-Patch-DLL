@@ -3044,7 +3044,7 @@ bool CvPlayerTraits::IsWarmonger()
 		GetNavalUnitMaintenanceModifier() != 0 ||
 		GetProductionBonusModifierConquest() != 0 ||
 		GetGoldenAgeFromVictory() != 0 ||
-		GetCombatModifierOnWarModifier() > 0) // JJ: > instead of != because someone might make it negative for whatever reason
+		GetCombatModifierOnWarModifier() > 0) // JJ: > instead of != because someone might use it as a malus component for a UA
 		return true;
 
 	for (int iYield = 0; iYield < NUM_YIELD_TYPES; iYield++)

@@ -15571,20 +15571,17 @@ int CvUnit::GetGenericMaxStrengthModifier(const CvUnit* pOtherUnit, const CvPlot
 				{
 					iModifier += kPlayer.GetPlayerTraits()->GetConquestOfTheWorldCityAttack();
 				}
+			}
+
+			// Bonus against Major and Minor Civ Cities
+			if (pBattlePlot->isCity() && pBattlePlot->getOwner() != NO_PLAYER && !(GET_PLAYER(pBattlePlot->getOwner()).isBarbarian()))
+			{
 				// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a city)
 				iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pBattlePlot->getOwner()).GetID());
-				if (iTurns > 0 && !(GET_PLAYER(pBattlePlot->getOwner()).isMinorCiv()) && !(GET_PLAYER(pBattlePlot->getOwner()).isBarbarian()))
+				if (iTurns > 0)
 				{
 					iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
 					iModifier += iTempModifier;
-				}
-			}
-
-			if (pBattlePlot->isCity() && pBattlePlot->getOwner() != NO_PLAYER && GET_PLAYER(pBattlePlot->getOwner()).isMajorCiv())
-			{
-				if (kPlayer.isGoldenAge())
-				{
-					iModifier += kPlayer.GetPlayerTraits()->GetConquestOfTheWorldCityAttack();
 				}
 			}
 #endif
@@ -15818,7 +15815,7 @@ int CvUnit::GetGenericMaxStrengthModifier(const CvUnit* pOtherUnit, const CvPlot
 #if defined(MOD_BALANCE_CORE)
 		// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a unit)
 		iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pOtherUnit->getOwner()).GetID());
-		if (iTurns > 0 && !(GET_PLAYER(pOtherUnit->getOwner()).isMinorCiv()) && !(pOtherUnit->isBarbarian()))
+		if (iTurns > 0 && !(pOtherUnit->isBarbarian()))
 		{
 			iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
 			iModifier += iTempModifier;
@@ -16652,7 +16649,7 @@ int CvUnit::GetMaxRangedCombatStrength(const CvUnit* pOtherUnit, const CvCity* p
 #if defined(MOD_BALANCE_CORE)
 		// JJ: Trait (player level) temporary combat modifier from declaration of war (case when defender is a unit)
 		iTurns = kPlayer.GetCombatModifierOnWarTurns(GET_PLAYER(pOtherUnit->getOwner()).GetID());
-		if (iTurns > 0 && !(GET_PLAYER(pOtherUnit->getOwner()).isMinorCiv()) && !(pOtherUnit->isBarbarian()))
+		if (iTurns > 0 && !(pOtherUnit->isBarbarian()))
 		{
 			iTempModifier = GET_PLAYER(getOwner()).GetPlayerTraits()->GetCombatModifierOnWarModifier();
 			iModifier += iTempModifier;

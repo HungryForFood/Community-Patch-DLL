@@ -1583,7 +1583,7 @@ void CvTeam::DoDeclareWar(TeamTypes eTeam, bool bDefensivePact, bool bMinorAllyP
 						int iCombatModifier = 0; // JJ: Initialize variable
 						// JJ: Attacking player has a trait to get temporary combat modifier on war?
 						iCombatModifier = kAttackingPlayer.GetPlayerTraits()->GetCombatModifierOnWarModifier();
-						if (iCombatModifier != 0 && !(kDefendingPlayer.isBarbarian()) && !(kDefendingPlayer.isMinorCiv())) // JJ: Check if we actually have a modifier defined, and that the defending player is not barbarian or a city state. The barbarian and city state checks are there because this is triggering even though theoretically they should not be included in the for loop.
+						if (iCombatModifier != 0 && !(kDefendingPlayer.isBarbarian())) // JJ: Check if we actually have a modifier defined, and that the defending player is not barbarian.
 						{
 							int iTurns = kAttackingPlayer.GetPlayerTraits()->GetCombatModifierOnWarTurns(); // JJ: Get the number of turns
 							iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed
@@ -1592,7 +1592,7 @@ void CvTeam::DoDeclareWar(TeamTypes eTeam, bool bDefensivePact, bool bMinorAllyP
 						}
 						// JJ: Defending player has a trait to get temporary combat modifier on war?
 						iCombatModifier = kDefendingPlayer.GetPlayerTraits()->GetCombatModifierOnWarModifier();
-						if (iCombatModifier != 0 && !(kAttackingPlayer.isBarbarian()) && !(kAttackingPlayer.isMinorCiv())) // JJ: Check if we actually have a modifier defined, and that the attacking player is not barbarian or a city state
+						if (iCombatModifier != 0 && !(kAttackingPlayer.isBarbarian())) // JJ: Check if we actually have a modifier defined, and that the attacking player is not barbarian.
 						{
 							int iTurns = kDefendingPlayer.GetPlayerTraits()->GetCombatModifierOnWarTurns(); // JJ: Get the number of turns
 							iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed

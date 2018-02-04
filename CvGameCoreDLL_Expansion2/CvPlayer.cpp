@@ -2087,7 +2087,7 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 		m_paiBuildingClassCulture.resize(GC.getNumBuildingClassInfos(), 0);
 
 		m_paiCombatModifierOnWarTurns.clear();
-		m_paiCombatModifierOnWarTurns.resize(MAX_MAJOR_CIVS, 0);
+		m_paiCombatModifierOnWarTurns.resize(MAX_PLAYERS, 0);
 #endif
 #if defined(MOD_BALANCE_CORE_RESOURCE_MONOPOLIES)
 		m_pabHasGlobalMonopoly.clear();
@@ -11183,13 +11183,16 @@ void CvPlayer::doTurnPostDiplomacy()
 		ChangeTourismBonusTurns(-1);
 	}
 #if defined(MOD_BALANCE_CORE)
-	for(int iI = 0; iI < MAX_MAJOR_CIVS; iI++)
+	if (GetPlayerTraits()->GetCombatModifierOnWarModifier() > 0) // JJ: Check if we actually have Trait_CombatModifierOnWar (save performance)
 	{
-		PlayerTypes ePlayer = (PlayerTypes)iI;
-		if(GetCombatModifierOnWarTurns(ePlayer) > 0) // JJ: Temporary combat bonus from declaration of war
+		for (int iI = 0; iI < MAX_PLAYERS; iI++)
 		{
-			ChangeCombatModifierOnWarTurns(ePlayer, -1);
-		}	
+			PlayerTypes ePlayer = (PlayerTypes)iI;
+			if (GetCombatModifierOnWarTurns(ePlayer) > 0) // JJ: Temporary combat bonus from declaration of war
+			{
+				ChangeCombatModifierOnWarTurns(ePlayer, -1);
+			}
+		}
 	}
 	if(GetCultureBonusTurnsConquest() > 0)
 	{
@@ -24274,7 +24277,7 @@ void CvPlayer::ChangeAttackBonusTurns(int iChange)
 // Get number of turns of combat modifier from declaration of war
 int CvPlayer::GetCombatModifierOnWarTurns(PlayerTypes ePlayer) const
 {
-	CvAssertMsg((int)ePlayer < MAX_MAJOR_CIVS, "Yield type out of bounds");
+	CvAssertMsg((int)ePlayer < MAX_PLAYERS, "Index out of bounds");
 	CvAssertMsg((int)ePlayer > -1, "Index out of bounds");
 	return m_paiCombatModifierOnWarTurns[ePlayer];
 }
@@ -24283,7 +24286,7 @@ int CvPlayer::GetCombatModifierOnWarTurns(PlayerTypes ePlayer) const
 // Change number of turns of combat modifier from declaration of war
 void CvPlayer::ChangeCombatModifierOnWarTurns(PlayerTypes ePlayer, int iChange)
 {
-	CvAssertMsg((int)ePlayer < MAX_MAJOR_CIVS, "Yield type out of bounds");
+	CvAssertMsg((int)ePlayer < MAX_PLAYERS, "Index out of bounds");
 	CvAssertMsg((int)ePlayer > -1, "Index out of bounds");
 	if(iChange != 0)
 	{
