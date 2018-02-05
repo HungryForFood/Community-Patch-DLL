@@ -1,4 +1,3 @@
-
 /*	-------------------------------------------------------------------------------------------------------
 	© 1991-2012 Take-Two Interactive Software and its subsidiaries.  Developed by Firaxis Games.  
 	Sid Meier's Civilization V, Civ, Civilization, 2K Games, Firaxis Games, Take-Two Interactive Software 
@@ -6330,6 +6329,8 @@ void CvPlayerTraits::Read(FDataStream& kStream)
 	kStream >> m_aiGoldenAgeGreatPersonRateModifier;
 	kStream >> m_aiGoldenAgeFromGreatPersonBirth;
 	kStream >> m_aiNumPledgesDomainProdMod;
+	kStream >> m_iCombatModifierOnWarModifier;
+	kStream >> m_iCombatModifierOnWarTurns;
 	kStream >> m_aiFreeUnitClassesDOW;
 	kStream >> m_aiDomainFreeExperienceModifier;
 	kStream >> m_ppiYieldFromTileEarnTerrainType;
@@ -6418,8 +6419,6 @@ void CvPlayerTraits::Read(FDataStream& kStream)
 	MOD_SERIALIZE_READ(66, kStream, m_iFaithCostModifier, 0);
 	MOD_SERIALIZE_READ(88, kStream, m_iVotePerXCSFollowingFollowingYourReligion, 0);
 	MOD_SERIALIZE_READ(88, kStream, m_iChanceToConvertReligiousUnits, 0);
-	MOD_SERIALIZE_READ(88, kStream, m_iCombatModifierOnWarModifier, 0);
-	MOD_SERIALIZE_READ(88, kStream, m_iCombatModifierOnWarTurns, 0);
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS)
 	// MOD_SERIALIZE_READ - v57/v58/v59 and v61 broke the save format  couldn't be helped, but don't make a habit of it!!!
@@ -6743,6 +6742,8 @@ void CvPlayerTraits::Write(FDataStream& kStream)
 	kStream << m_aiGoldenAgeGreatPersonRateModifier;
 	kStream << m_aiGoldenAgeFromGreatPersonBirth;
 	kStream << m_aiNumPledgesDomainProdMod;
+	kStream << m_iCombatModifierOnWarModifier;
+	kStream << m_iCombatModifierOnWarTurns;
 	kStream << m_aiFreeUnitClassesDOW;
 	kStream << m_aiDomainFreeExperienceModifier;
 	kStream << m_ppiYieldFromTileEarnTerrainType;
@@ -6834,10 +6835,6 @@ void CvPlayerTraits::Write(FDataStream& kStream)
 	{
 		kStream << m_aUniqueLuxuryAreas[iI];
 	}
-#if defined(MOD_BALANCE_CORE)
-	MOD_SERIALIZE_WRITE(kStream, m_iCombatModifierOnWarModifier);
-	MOD_SERIALIZE_WRITE(kStream, m_iCombatModifierOnWarTurns);
-#endif
 }
 
 // PRIVATE METHODS
