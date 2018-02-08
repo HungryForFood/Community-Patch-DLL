@@ -1586,8 +1586,8 @@ void CvTeam::DoDeclareWar(TeamTypes eTeam, bool bDefensivePact, bool bMinorAllyP
 						if (iCombatModifier != 0 && !(kDefendingPlayer.isBarbarian())) // JJ: Check if we actually have a modifier defined, and that the defending player is not barbarian.
 						{
 							int iTurns = kAttackingPlayer.GetPlayerTraits()->GetCombatModifierOnWarTurns(); // JJ: Get the number of turns
-							iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed
-							iTurns /= 100; // JJ: Divide by 100 because the game speed modifier is a percent
+							//iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed
+							//iTurns /= 100; // JJ: Divide by 100 because the game speed modifier is a percent
 							kAttackingPlayer.ChangeCombatModifierOnWarTurns(eDefendingPlayer, iTurns); // JJ: Add number of turns for the defending player
 						}
 						// JJ: Defending player has a trait to get temporary combat modifier on war?
@@ -1595,8 +1595,8 @@ void CvTeam::DoDeclareWar(TeamTypes eTeam, bool bDefensivePact, bool bMinorAllyP
 						if (iCombatModifier != 0 && !(kAttackingPlayer.isBarbarian())) // JJ: Check if we actually have a modifier defined, and that the attacking player is not barbarian.
 						{
 							int iTurns = kDefendingPlayer.GetPlayerTraits()->GetCombatModifierOnWarTurns(); // JJ: Get the number of turns
-							iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed
-							iTurns /= 100; // JJ: Divide by 100 because the game speed modifier is a percent
+							//iTurns *= GC.getGame().getGameSpeedInfo().getGoldenAgePercent(); // JJ: Scale with game speed
+							//iTurns /= 100; // JJ: Divide by 100 because the game speed modifier is a percent
 							kDefendingPlayer.ChangeCombatModifierOnWarTurns(eAttackingPlayer, iTurns); // JJ: Add number of turns for the defending player
 						}
 #endif

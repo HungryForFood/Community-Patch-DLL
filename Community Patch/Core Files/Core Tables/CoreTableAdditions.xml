@@ -754,7 +754,7 @@
 		<Column name="Modifier" type="integer"/>
 	</Table>
 
-	<!-- TRAIT: Grants a combat modifier for the specified number of turns (scales with game speed) when a war starts, no matter who declares first. Bonus applies only to units of that particular civ, so no perma-bonus from constant declarations. -->
+	<!-- TRAIT: Grants a combat modifier for the specified number of turns (doesnt scale with game speed) when a war starts, no matter who declares first. Bonus applies only to units of that particular civ, so no perma-bonus from constant declarations. -->
 	<Table name="Trait_CombatModifierOnWar">
 		<Column name="TraitType" type="text" reference="Traits(Type)"/>
 		<Column name="Modifier" type="integer" default="0"/>
