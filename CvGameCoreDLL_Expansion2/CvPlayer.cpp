@@ -480,6 +480,7 @@ CvPlayer::CvPlayer() :
 #endif
 #if defined(MOD_BALANCE_CORE_HAPPINESS_LUXURY)
 	, m_iBaseLuxuryHappiness("CvPlayer::m_iBaseLuxuryHappiness", m_syncArchive)
+	, m_iPopNeededForLuxUpgrade("CvPlayer::m_iPopNeededForLuxUpgrade", m_syncArchive)
 #endif
 #if defined(MOD_BALANCE_CORE_POLICIES)
 	, m_iHappinessPerXPopulationGlobal("CvPlayer::m_iHappinessPerXPopulationGlobal", m_syncArchive)
@@ -664,6 +665,8 @@ CvPlayer::CvPlayer() :
 	, m_aiArtYieldBonus("CvPlayer::m_aiArtYieldBonus", m_syncArchive)
 	, m_aiMusicYieldBonus("CvPlayer::m_aiMusicYieldBonus", m_syncArchive)
 	, m_aiLitYieldBonus("CvPlayer::m_aiLitYieldBonus", m_syncArchive)
+	, m_aiFilmYieldBonus("CvPlayer::m_aiFilmYieldBonus", m_syncArchive)
+	, m_aiRelicYieldBonus("CvPlayer::m_aiRelicYieldBonus", m_syncArchive)
 	, m_aiReligionYieldRateModifier("CvPlayer::m_aiReligionYieldRateModifier", m_syncArchive)
 	, m_aiGoldenAgeYieldMod("CvPlayer::m_aiGoldenAgeYieldMod", m_syncArchive)
 	, m_aiYieldFromNonSpecialistCitizens("CvPlayer::m_aiYieldFromNonSpecialistCitizens", m_syncArchive)
@@ -1162,7 +1165,7 @@ void CvPlayer::init(PlayerTypes eID)
 		setAdvancedActionWonder(2);
 		setAdvancedActionBuilding(12);
 	}
-	SetBaseLuxuryHappiness(0);
+	SetBaseLuxuryHappiness(1);
 	GET_TEAM(getTeam()).DoUpdateBestRoute();
 #endif
 
@@ -1337,6 +1340,7 @@ void CvPlayer::uninit()
 #endif
 #if defined(MOD_BALANCE_CORE_HAPPINESS_LUXURY)
 	m_iBaseLuxuryHappiness = 0;
+	m_iPopNeededForLuxUpgrade = 0;
 #endif
 	m_iUprisingCounter = 0;
 	m_iExtraHappinessPerLuxury = 0;
@@ -1889,6 +1893,12 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 
 	m_aiLitYieldBonus.clear();
 	m_aiLitYieldBonus.resize(NUM_YIELD_TYPES, 0);	
+
+	m_aiFilmYieldBonus.clear();
+	m_aiFilmYieldBonus.resize(NUM_YIELD_TYPES, 0);
+
+	m_aiRelicYieldBonus.clear();
+	m_aiRelicYieldBonus.resize(NUM_YIELD_TYPES, 0);
 
 	m_aiReligionYieldRateModifier.clear();
 	m_aiReligionYieldRateModifier.resize(NUM_YIELD_TYPES, 0);
@@ -5224,7 +5234,7 @@ void CvPlayer::DoRevolutionPlayer(PlayerTypes ePlayer, int iOldCityID)
 		pLog = LOGFILEMGR.GetLog(strFileName, FILogFile::kDontTimeStamp);
 		strBaseString.Format("%03d, ", GC.getGame().getElapsedGameTurns());
 		strBaseString += playerName + ", ";
-		strOutBuf.Format("Revolution! Civ Liberated and %s restored to %s", pCity->getName().GetCString(), GET_PLAYER(ePlayer).getName());
+		strOutBuf.Format("Revolution! Civ Liberated and %s restored to %s", pCity->getNameKey(), GET_PLAYER(ePlayer).getName());
 		strBaseString += strOutBuf;
 		pLog->Msg(strBaseString);
 	}
@@ -10932,6 +10942,7 @@ void CvPlayer::doTurn()
 
 		RefreshCSAlliesFriends();
 		UpdateHappinessFromMinorCivs();
+		CheckPopLuxUpgradeThreshold();
 #endif
 		DoUpdateCramped();
 
@@ -12245,7 +12256,7 @@ int CvPlayer::countNumBuildings(BuildingTypes eBuilding) const
 	}
 #if defined(MOD_BALANCE_CORE)
 		GET_PLAYER(GetID()).setNumBuildings(eBuilding, iCount);
-		return 0;
+		return iCount;
 	}
 	else
 	{
@@ -16946,9 +16957,9 @@ void CvPlayer::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst
 		}
 	}
 #if defined(MOD_BALANCE_CORE)
-	DoUpdateHappinessFromBuildings();
 	//Refresh cache data.
 	countNumBuildings(eBuilding, true);
+	DoUpdateHappinessFromBuildings(); // fix for 3939, this function needs player's building count already updated!
 #endif
 }
 
@@ -19712,7 +19723,7 @@ int CvPlayer::DoDifficultyBonus(HistoricEventTypes eHistoricEvent)
 
 		GetTreasury()->ChangeGold(iYieldHandicap);
 		ChangeGoldenAgeProgressMeter(iYieldHandicap);
-		changeJONSCulture(iYieldHandicap);
+		changeJONSCulture(iYieldHandicap / 2);
 		
 		TechTypes eCurrentTech = GetPlayerTechs()->GetCurrentResearch();
 		if(eCurrentTech == NO_TECH)
@@ -20888,8 +20899,8 @@ void CvPlayer::DoUprising()
 /// City can revolt if the empire is Super Unhappy
 void CvPlayer::DoUpdateCityRevolts()
 {
-	int iPublicUnhappiness = GetCulture()->GetPublicOpinionUnhappiness() / 5;
-	if (iPublicUnhappiness <= 0 && IsEmpireSuperUnhappy())
+	int iPublicUnhappiness = 0;
+	if (GetCulture()->GetPublicOpinionUnhappiness() > 0 || IsEmpireSuperUnhappy())
 	{
 		iPublicUnhappiness = 1;
 	}
@@ -20912,6 +20923,25 @@ void CvPlayer::DoUpdateCityRevolts()
 			DoResetCityRevoltCounter();
 		}
 	}
+	else
+	{
+		int iTurns = /*5*/ GC.getREVOLT_COUNTER_MIN();
+		CvGame& theGame = GC.getGame();
+
+		// Game speed mod
+		int iMod = theGame.getGameSpeedInfo().getTrainPercent();
+		// Only LENGTHEN time between rebels
+		if (iMod > 100)
+		{
+			iTurns *= iMod;
+			iTurns /= 100;
+		}
+
+		if (iTurns <= 0)
+			iTurns = 1;
+
+		SetCityRevoltCounter(iTurns);
+	}
 }
 
 //	--------------------------------------------------------------------------------
@@ -20925,7 +20955,8 @@ int CvPlayer::GetCityRevoltCounter() const
 /// City revolt countdown - set
 void CvPlayer::SetCityRevoltCounter(int iValue)
 {
-	m_iCityRevoltCounter = iValue;
+	if (iValue != m_iCityRevoltCounter)
+		m_iCityRevoltCounter = iValue;
 }
 
 //	--------------------------------------------------------------------------------
@@ -20936,8 +20967,9 @@ void CvPlayer::ChangeCityRevoltCounter(int iChange)
 
 	if ((GC.getLogging() && GC.getAILogging()))
 	{
+		int Counter = m_iCityRevoltCounter;
 		CvString strLogString;
-		strLogString.Format("CP - Countdown for City Revolt CONTINUES - %d turns.", m_iCityRevoltCounter);
+		strLogString.Format("CP - Countdown for City Revolt CONTINUES - %d turns.", Counter);
 
 		CvString strTemp;
 
@@ -20997,7 +21029,7 @@ void CvPlayer::DoResetCityRevoltCounter()
 		if ((GC.getLogging() && GC.getAILogging()))
 		{
 			CvString strLogString;
-			strLogString.Format("CP - Countdown for City Revolt BEGINS - %s, will go to %s in %d turns.", pMostUnhappyCity->getName().GetCString(), GET_PLAYER(eRecipient).getName(), iTurns);
+			strLogString.Format("CP - Countdown for City Revolt BEGINS - %s, will go to %s in %d turns.", pMostUnhappyCity->getNameKey(), GET_PLAYER(eRecipient).getName(), iTurns);
 
 			CvString strTemp;
 
@@ -21035,7 +21067,7 @@ void CvPlayer::DoResetCityRevoltCounter()
 		if ((GC.getLogging() && GC.getAILogging()))
 		{
 			CvString strLogString;
-			strLogString.Format("CP - Countdown for City Revolt BEGINS - %s, will go to DEAD PLAYER %s in %d turns.", pMostUnhappyCity->getName().GetCString(), GET_PLAYER(eRecipient).getName(), iTurns);
+			strLogString.Format("CP - Countdown for City Revolt BEGINS - %s, will go to DEAD PLAYER %s in %d turns.", pMostUnhappyCity->getNameKey(), GET_PLAYER(eRecipient).getName(), iTurns);
 
 			CvString strTemp;
 
@@ -21135,7 +21167,7 @@ void CvPlayer::DoCityRevolt()
 				pLog = LOGFILEMGR.GetLog(strFileName, FILogFile::kDontTimeStamp);
 				strBaseString.Format("%03d, ", GC.getGame().getElapsedGameTurns());
 				strBaseString += playerName + ", ";
-				strOutBuf.Format("Defection! %s restored to %s", pMostUnhappyCity->getName().GetCString(), GET_PLAYER(pMostUnhappyCity->getOwner()).getName());
+				strOutBuf.Format("Defection! %s ceded to %s", pMostUnhappyCity->getNameKey(), kRecipient.getName());
 				strBaseString += strOutBuf;
 				pLog->Msg(strBaseString);
 			}
@@ -21799,51 +21831,69 @@ int CvPlayer::getGlobalAverage(YieldTypes eYield) const
 //	--------------------------------------------------------------------------------
 int CvPlayer::getPopNeededForLux() const
 {
-	//Needed for LUA
+	if (getNumCities() == 0)
+		return -1;
+
+	return m_iPopNeededForLuxUpgrade;
+}
+
+void CvPlayer::setPopNeededForLux()
+{
+	int iBaseHappiness = GC.getBALANCE_HAPPINESS_POPULATION_DIVISOR();
+
 	//Happiness as a factor of population and number of cities. Divisor determines this.
-	int iLoop;
-	int iTotalCities = 0;
-	for(const CvCity* pLoopCity = firstCity(&iLoop); pLoopCity != NULL; pLoopCity = nextCity(&iLoop))
+	if (GetBaseLuxuryHappiness() > 0)
 	{
-		if(pLoopCity != NULL)
+		//Needed for LUA
+		//Happiness as a factor of population and number of cities. Divisor determines this.
+		int iTechProgress = (GET_TEAM(getTeam()).GetTeamTechs()->GetNumTechsKnown() * 100) / GC.getNumTechInfos();
+
+		iBaseHappiness *= (100 + iTechProgress + getCurrentTotalPop() + (getNumCities() * 5));
+		iBaseHappiness /= 100;
+
+		iBaseHappiness *= GetBaseLuxuryHappiness();
+	}
+
+	m_iPopNeededForLuxUpgrade = iBaseHappiness;
+}
+void CvPlayer::CheckPopLuxUpgradeThreshold()
+{
+	if (getNumCities() == 0)
+		return;
+
+	if (getCurrentTotalPop() >= getPopNeededForLux())
+	{
+		SetBaseLuxuryHappiness(GetBaseLuxuryHappiness() + 1);
+		setPopNeededForLux();
+
+#if defined(MOD_BALANCE_CORE_HAPPINESS)
+		if (MOD_BALANCE_CORE_HAPPINESS)
 		{
-			//Venice should get a modification here.
-			if(GET_PLAYER(GetID()).GetPlayerTraits()->IsNoAnnexing())
+			if (GC.getLogging() && GC.getAILogging())
 			{
-				iTotalCities++;
-			}
-			else if(!pLoopCity->IsPuppet())
-			{
-				iTotalCities++;
+				CvString playerName;
+				FILogFile* pLog;
+				CvString strBaseString;
+				CvString strOutBuf;
+				CvString strFileName = "PlayerHappinessStats.csv";
+				playerName = getCivilizationShortDescription();
+				pLog = LOGFILEMGR.GetLog(strFileName, FILogFile::kDontTimeStamp);
+				strBaseString.Format("%03d, ", GC.getGame().getElapsedGameTurns());
+				strBaseString += playerName + ", ";
+				strOutBuf.Format("Bonus Happiness from Luxuries Increased by 1. Now: %d. Need %d Pop for next threshold.", GetBaseLuxuryHappiness(), getPopNeededForLux());
+				strBaseString += strOutBuf;
+				pLog->Msg(strBaseString);
 			}
 		}
+#endif
 	}
-	int iInflation = GC.getBALANCE_HAPPINESS_POPULATION_DIVISOR();
-		
-	iInflation *= (100 + getCurrentTotalPop() + iTotalCities);
-	iInflation /= 100;
-
-	int iBaseHappiness = 1;
-	
-	//Happiness as a factor of population and number of cities. Divisor determines this.
-	if(GetBaseLuxuryHappiness() <= 0)
-	{
-		iBaseHappiness = max(iInflation, 1);
-	}
-	else
-	{
-		iBaseHappiness = (GetBaseLuxuryHappiness() * iInflation);
-	}
-
-	return iBaseHappiness;
 }
 //	--------------------------------------------------------------------------------
 int CvPlayer::GetBonusHappinessFromLuxuries() const
 {
-	if(getCurrentTotalPop() >= getPopNeededForLux())
-	{
-		GET_PLAYER(GetID()).SetBaseLuxuryHappiness(GetBaseLuxuryHappiness() + 1);
-	}
+	if (getPopNeededForLux() == -1)
+		return 0;
+
 	int iHappiness = GetBaseLuxuryHappiness();
 	int iExtraHappiness = 0;
 	int iNumHappinessResources = 0;
@@ -21860,7 +21910,7 @@ int CvPlayer::GetBonusHappinessFromLuxuries() const
 	int iNumLux = iNumHappinessResources;
 	if(iNumLux > 0)
 	{
-		iExtraHappiness = ((iNumLux * iHappiness) / /*8*/ max(1,GC.getBALANCE_HAPPINESS_LUXURY_BASE()));
+		iExtraHappiness = ((iNumLux * iHappiness * 100) / /*8*/ max(1,GC.getBALANCE_HAPPINESS_LUXURY_BASE()));
 	}
 	return iExtraHappiness;
 }
@@ -34207,6 +34257,46 @@ void CvPlayer::changeLitYieldBonus(YieldTypes eIndex, int iChange)
 }
 
 //	--------------------------------------------------------------------------------
+int CvPlayer::getFilmYieldBonus(YieldTypes eIndex) const
+{
+	CvAssertMsg(eIndex >= 0, "eIndex is expected to be non-negative (invalid Index)");
+	CvAssertMsg(eIndex < NUM_YIELD_TYPES, "eIndex is expected to be within maximum bounds (invalid Index)");
+	return m_aiFilmYieldBonus[eIndex];
+}
+
+//	--------------------------------------------------------------------------------
+void CvPlayer::changeFilmYieldBonus(YieldTypes eIndex, int iChange)
+{
+	CvAssertMsg(eIndex >= 0, "eIndex is expected to be non-negative (invalid Index)");
+	CvAssertMsg(eIndex < NUM_YIELD_TYPES, "eIndex is expected to be within maximum bounds (invalid Index)");
+
+	if (iChange != 0)
+	{
+		m_aiFilmYieldBonus.setAt(eIndex, m_aiFilmYieldBonus[eIndex] + iChange);
+	}
+}
+
+//	--------------------------------------------------------------------------------
+int CvPlayer::getRelicYieldBonus(YieldTypes eIndex) const
+{
+	CvAssertMsg(eIndex >= 0, "eIndex is expected to be non-negative (invalid Index)");
+	CvAssertMsg(eIndex < NUM_YIELD_TYPES, "eIndex is expected to be within maximum bounds (invalid Index)");
+	return m_aiRelicYieldBonus[eIndex];
+}
+
+//	--------------------------------------------------------------------------------
+void CvPlayer::changeRelicYieldBonus(YieldTypes eIndex, int iChange)
+{
+	CvAssertMsg(eIndex >= 0, "eIndex is expected to be non-negative (invalid Index)");
+	CvAssertMsg(eIndex < NUM_YIELD_TYPES, "eIndex is expected to be within maximum bounds (invalid Index)");
+
+	if (iChange != 0)
+	{
+		m_aiRelicYieldBonus.setAt(eIndex, m_aiRelicYieldBonus[eIndex] + iChange);
+	}
+}
+
+//	--------------------------------------------------------------------------------
 int CvPlayer::getGoldenAgeYieldMod(YieldTypes eIndex)	const
 {
 	CvAssertMsg(eIndex >= 0, "eIndex expected to be >= 0");
@@ -42279,6 +42369,8 @@ void CvPlayer::processPolicies(PolicyTypes ePolicy, int iChange)
 		changeArtYieldBonus(eYield, (pPolicy->GetArtYieldChanges(iI) * iChange));
 		changeMusicYieldBonus(eYield, (pPolicy->GetMusicYieldChanges(iI) * iChange));
 		changeLitYieldBonus(eYield, (pPolicy->GetLitYieldChanges(iI) * iChange));
+		changeFilmYieldBonus(eYield, (pPolicy->GetFilmYieldChanges(iI) * iChange));
+		changeRelicYieldBonus(eYield, (pPolicy->GetRelicYieldChanges(iI) * iChange));
 
 		changeYieldFromBirthRetroactive(eYield, (pPolicy->GetYieldFromBirthRetroactive(iI) * iChange));
 		changeYieldFromBirthCapitalRetroactive(eYield, (pPolicy->GetYieldFromBirthCapitalRetroactive(iI) * iChange));
