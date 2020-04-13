@@ -820,6 +820,25 @@ protected:
 
 	
 #endif
+
+#if defined(MOD_GLOBAL_POWER)
+	static int lGetPowerGridID(lua_State* L);
+
+	static int lGetPowerGenerationFromBuildings(lua_State* L);
+	static int lGetPowerConsumptionFromBuildings(lua_State* L);
+
+	static int lGetPowerGenerationFromTerrain(lua_State* L);
+	static int lGetPowerConsumptionFromTerrain(lua_State* L);
+
+	static int lGetPowerExport(lua_State* L);
+	static int lGetPowerImport(lua_State* L);
+
+	static int lGetNetPower(lua_State* L);
+#endif
+
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+	static int lGetNumDeactivatedBuilding(lua_State* L);
+#endif
 };
 
 #endif //CVLUACITY_H

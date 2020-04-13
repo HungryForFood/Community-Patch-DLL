@@ -1210,6 +1210,15 @@ int CvLuaEnums::pRegister(lua_State* L)
 	EnumEnd(L);
 #endif
 
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+	// BuildingDeactivationTypes
+	EnumStart(L, "BuildingDeactivationTypes");
+	RegisterEnum(NO_DEACTIVATION);
+	RegisterEnum(DEACTIVATION_RESOURCE);
+	RegisterEnum(DEACTIVATION_POWER);
+	RegisterEnum(NUM_DEACTIVATION_TYPES);
+#endif
+
 	return 0;
 }
 //------------------------------------------------------------------------------

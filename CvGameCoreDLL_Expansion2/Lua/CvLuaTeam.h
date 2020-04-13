@@ -265,6 +265,10 @@ protected:
 	LUAAPIEXTN(GetNumTurnsSinceVassalTaxSet, int, iPlayer);
 	LUAAPIEXTN(GetNumVassals, int);
 #endif
+
+#if defined(MOD_GLOBAL_POWER)
+	static int lIsPowerEnabled(lua_State* L);
+#endif
 };
 
 #endif //CVLUATEAM_H

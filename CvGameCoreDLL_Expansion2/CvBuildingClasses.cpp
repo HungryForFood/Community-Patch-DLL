@@ -424,6 +424,15 @@ CvBuildingEntry::CvBuildingEntry(void):
 #if defined(MOD_BALANCE_CORE) && defined(MOD_API_UNIFIED_YIELDS)
 	m_piiGreatPersonProgressFromConstruction(),
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	m_iPowerChange(0),
+	m_bAllowsWaterPowerTransmission(false),
+#endif
+#if defined(MOD_BALANCE_CORE)
+	m_iGoldMaintenanceOnSubsequentCopy(0),
+	m_bRepeatable(false),
+	b_iMaxNumInCity(0),
+#endif
 	m_iNumThemingBonuses(0)
 {
 }
@@ -918,6 +927,16 @@ bool CvBuildingEntry::CacheResults(Database::Results& kResults, CvDatabaseUtilit
 	m_iGreatWorkCount = kResults.GetInt("GreatWorkCount");
 	szTextVal = kResults.GetText("FreeGreatWork");
 	m_eFreeGreatWork = (GreatWorkType)GC.getInfoTypeForString(szTextVal, true);
+
+#if defined(MOD_GLOBAL_POWER)
+	m_iPowerChange = kResults.GetInt("PowerChange");
+	m_bAllowsWaterPowerTransmission = kResults.GetBool("AllowsWaterPowerTransmission");
+#endif
+#if defined(MOD_BALANCE_CORE)
+	m_iGoldMaintenanceOnSubsequentCopy = kResults.GetInt("GoldMaintenanceOnSubsequentCopy");
+	m_bRepeatable = kResults.GetBool("IsRepeatable");
+	b_iMaxNumInCity = kResults.GetInt("MaxNumInCity");
+#endif
 
 	//Arrays
 	const char* szBuildingType = GetType();
@@ -2900,6 +2919,38 @@ CvString CvBuildingEntry::GetThemingBonusHelp() const
 {
 	return m_strThemingBonusHelp;
 }
+
+#if defined(MOD_GLOBAL_POWER)
+/// Does this building use or produce power?
+int CvBuildingEntry::GetPowerChange() const
+{
+	return m_iPowerChange;
+}
+/// Does this building allow water power transmission for this city?
+bool CvBuildingEntry::IsAllowsWaterPowerTransmission() const
+{
+	return m_bAllowsWaterPowerTransmission;
+}
+#endif
+#if defined(MOD_BALANCE_CORE)
+/// Does this building have a higher maintenance cost for the subsequent copies we build?
+int CvBuildingEntry::GetGoldMaintenanceOnSubsequentCopy() const
+{
+	return m_iGoldMaintenanceOnSubsequentCopy;
+}
+
+/// Can we build multiple copies of this building in a city?
+bool CvBuildingEntry::IsRepeatable() const
+{
+	return m_bRepeatable;
+}
+
+/// How many copies can we build in a city, if repeatable?
+int CvBuildingEntry::GetMaxNumInCity() const
+{
+	return b_iMaxNumInCity;
+}
+#endif
 // ARRAYS
 
 #if defined(MOD_DIPLOMACY_CITYSTATES) || defined(MOD_BALANCE_CORE)
@@ -4298,6 +4349,9 @@ CvCityBuildings::CvCityBuildings():
 	m_paiBuildingOriginalTime(NULL),
 	m_paiNumRealBuilding(NULL),
 	m_paiNumFreeBuilding(NULL),
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	m_ppiNumDeactivatedBuilding(),
+#endif
 #if defined(MOD_BALANCE_CORE)
 	m_paiFirstTimeBuilding(NULL),
 	m_paiThemingBonusIndex(NULL),
@@ -4351,6 +4405,9 @@ void CvCityBuildings::Init(CvBuildingXMLEntries* pPossibleBuildings, CvCity* pCi
 	CvAssertMsg(m_paiNumFreeBuilding==NULL, "about to leak memory, CvCityBuildings::m_paiNumFreeBuilding");
 	m_paiNumFreeBuilding = FNEW(int[iNumBuildings], c_eCiv5GameplayDLL, 0);
 
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	m_ppiNumDeactivatedBuilding.clear();
+#endif
 #if defined(MOD_BALANCE_CORE)
 	CvAssertMsg(m_paiFirstTimeBuilding==NULL, "about to leak memory, CvCityBuildings::m_paiFirstTimeBuilding");
 	m_paiFirstTimeBuilding = FNEW(int[iNumBuildings], c_eCiv5GameplayDLL, 0);
@@ -4374,6 +4431,9 @@ void CvCityBuildings::Uninit()
 	SAFE_DELETE_ARRAY(m_paiBuildingOriginalTime);
 	SAFE_DELETE_ARRAY(m_paiNumRealBuilding);
 	SAFE_DELETE_ARRAY(m_paiNumFreeBuilding);
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	m_ppiNumDeactivatedBuilding.clear();
+#endif
 #if defined(MOD_BALANCE_CORE)
 	SAFE_DELETE_ARRAY(m_paiFirstTimeBuilding);
 	SAFE_DELETE_ARRAY(m_paiThemingBonusIndex);
@@ -4409,7 +4469,9 @@ void CvCityBuildings::Reset()
 		m_paiThemingBonusIndex[iI] = -1;
 #endif
 	}
-
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	m_ppiNumDeactivatedBuilding.clear();
+#endif
 #if defined(MOD_BALANCE_CORE)
 	m_buildingsThatExistAtLeastOnce.clear();
 #endif
@@ -4442,6 +4504,26 @@ void CvCityBuildings::Read(FDataStream& kStream)
 	BuildingArrayHelpers::Read(kStream, m_paiBuildingOriginalTime);
 	BuildingArrayHelpers::Read(kStream, m_paiNumRealBuilding);
 	BuildingArrayHelpers::Read(kStream, m_paiNumFreeBuilding);
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	size_t nItems;
+	kStream >> nItems;
+	m_ppiNumDeactivatedBuilding.clear();
+	for (size_t i = 0; i < nItems; i++)
+	{
+		int iBuildingType;
+		size_t nItems2;
+		kStream >> iBuildingType;
+		kStream >> nItems2;
+		for (size_t j = 0; j < nItems2; j++)
+		{
+			int iDeactivationType, iNum;
+			kStream >> iDeactivationType;
+			kStream >> iNum;
+
+			m_ppiNumDeactivatedBuilding[(BuildingTypes)iBuildingType][(BuildingDeactivationTypes)iDeactivationType] = iNum;
+		}
+	}
+#endif
 #if defined(MOD_BALANCE_CORE)
 	BuildingArrayHelpers::Read(kStream, m_paiFirstTimeBuilding);
 	BuildingArrayHelpers::Read(kStream, m_paiThemingBonusIndex);
@@ -4492,6 +4574,19 @@ void CvCityBuildings::Write(FDataStream& kStream)
 	BuildingArrayHelpers::Write(kStream, m_paiBuildingOriginalTime, iNumBuildings);
 	BuildingArrayHelpers::Write(kStream, m_paiNumRealBuilding, iNumBuildings);
 	BuildingArrayHelpers::Write(kStream, m_paiNumFreeBuilding, iNumBuildings);
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	kStream << m_ppiNumDeactivatedBuilding.size();
+	for (AllBuildingDeactivationStore::const_iterator it = m_ppiNumDeactivatedBuilding.begin(); it != m_ppiNumDeactivatedBuilding.end(); ++it)
+	{
+		kStream << (int)it->first;
+		kStream << it->second.size();
+		for (SingleBuildingDeactivationStore::const_iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2)
+		{
+			kStream << (int)it2->first;
+			kStream << it2->second;
+		}
+	}
+#endif
 #if defined(MOD_BALANCE_CORE)
 	BuildingArrayHelpers::Write(kStream, m_paiFirstTimeBuilding, iNumBuildings);
 	BuildingArrayHelpers::Write(kStream, m_paiThemingBonusIndex, iNumBuildings);
@@ -4925,6 +5020,26 @@ void CvCityBuildings::SetNumRealBuildingTimed(BuildingTypes eIndex, int iNewValu
 			SetBuildingOriginalTime(eIndex, MIN_INT);
 		}
 
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+		// need to reactivate buildings to before removing to prevent issues
+		if (MOD_BUILDINGS_DEACTIVATION && iChangeNumRealBuilding < 0)
+		{
+			for (int iI = 0; iI < NUM_DEACTIVATION_TYPES; iI++)
+			{
+				BuildingDeactivationTypes eDeactivation = (BuildingDeactivationTypes)iI;
+
+				int iNumDeactivated = GetNumDeactivatedBuilding(eIndex, eDeactivation);
+				if (iNumDeactivated <= 0)
+				{
+					continue;
+				}
+				int iNumToActivate = MIN(iNumDeactivated, iChangeNumRealBuilding * -1);
+
+				SetNumDeactivatedBuilding(eIndex, eDeactivation, iNumDeactivated - iNumToActivate);
+			}
+		}
+#endif
+
 		// Process building effects
 		if(iOldNumBuilding != GetNumBuilding(eIndex))
 		{
@@ -5181,6 +5296,26 @@ void CvCityBuildings::SetNumFreeBuilding(BuildingTypes eIndex, int iNewValue)
 		
 		m_paiNumFreeBuilding[eIndex] = iNewValue;
 
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+		// need to reactivate buildings to before removing to prevent issues
+		if (MOD_BUILDINGS_DEACTIVATION && iChangeNumFreeBuilding < 0)
+		{
+			for (int iI = 0; iI < NUM_DEACTIVATION_TYPES; iI++)
+			{
+				BuildingDeactivationTypes eDeactivation = (BuildingDeactivationTypes)iI;
+
+				int iNumDeactivated = GetNumDeactivatedBuilding(eIndex, eDeactivation);
+				if (iNumDeactivated <= 0)
+				{
+					continue;
+				}
+				int iNumToActivate = MIN(iNumDeactivated, iChangeNumFreeBuilding * -1);
+
+				SetNumDeactivatedBuilding(eIndex, eDeactivation, iNumDeactivated - iNumToActivate);
+			}
+		}
+#endif
+
 		// Process building effects
 		m_pCity->processBuilding(eIndex, iChangeNumFreeBuilding, true, false, false, true);
 #else
@@ -5220,6 +5355,93 @@ void CvCityBuildings::SetNumFreeBuilding(BuildingTypes eIndex, int iNewValue)
 #endif
 	}
 }
+
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+/// Accessor: Get number of buildings of this type in city which were deactivated for any reason
+int CvCityBuildings::GetNumDeactivatedBuilding(BuildingTypes eIndex) const
+{
+	CvAssertMsg(eIndex >= 0, "eIndex expected to be >= 0");
+	CvAssertMsg(eIndex < GetNumBuildings(), "eIndex expected to be < GetNumBuildings()");
+
+	AllBuildingDeactivationStore::const_iterator itBuilding = m_ppiNumDeactivatedBuilding.find(eIndex);
+	int iNum = 0;
+	if (itBuilding != m_ppiNumDeactivatedBuilding.end())
+	{
+		for (SingleBuildingDeactivationStore::const_iterator itDeactivation = itBuilding->second.begin(); itDeactivation != itBuilding->second.end(); ++itDeactivation)
+		{
+			iNum += itDeactivation->second;
+		}
+	}
+	return iNum;
+}
+
+/// Accessor: Get number of buildings of this type in city which were deactivated for this reason
+int CvCityBuildings::GetNumDeactivatedBuilding(BuildingTypes eIndex, BuildingDeactivationTypes eDeactivation) const
+{
+	CvAssertMsg(eIndex >= 0, "eIndex expected to be >= 0");
+	CvAssertMsg(eIndex < GetNumBuildings(), "eIndex expected to be < GetNumBuildings()");
+
+	CvAssertMsg(eDeactivation >= 0, "eDeactivation expected to be >= 0");
+	CvAssertMsg(eDeactivation < NUM_DEACTIVATION_TYPES, "eDeactivation expected to be < NUM_DEACTIVATION_TYPES");
+
+	AllBuildingDeactivationStore::const_iterator itBuilding = m_ppiNumDeactivatedBuilding.find(eIndex);
+	if (itBuilding != m_ppiNumDeactivatedBuilding.end())
+	{
+		SingleBuildingDeactivationStore::const_iterator itDeactivation = itBuilding->second.find(eDeactivation);
+		if (itDeactivation != itBuilding->second.end())
+		{
+			return itDeactivation->second;
+		}
+	}
+	return 0;
+}
+
+/// Accessor: Set number of deactivated buildings of this type in city due to this reason
+void CvCityBuildings::SetNumDeactivatedBuilding(BuildingTypes eIndex, BuildingDeactivationTypes eDeactivation, int iNewValue)
+{
+	CvAssertMsg(eIndex >= 0, "eIndex expected to be >= 0");
+	CvAssertMsg(eIndex < GetNumBuildings(), "eIndex expected to be < GetNumBuildings()");
+
+	CvAssertMsg(eDeactivation >= 0, "eDeactivation expected to be >= 0");
+	CvAssertMsg(eDeactivation < NUM_DEACTIVATION_TYPES, "eDeactivation expected to be < NUM_DEACTIVATION_TYPES");
+
+	int iChange = iNewValue - GetNumDeactivatedBuilding(eIndex, eDeactivation);
+	if (iChange != 0)
+	{
+		if (iNewValue != 0)
+		{
+			m_ppiNumDeactivatedBuilding[eIndex][eDeactivation] = iNewValue;
+		}
+		else
+		{
+			m_ppiNumDeactivatedBuilding[eIndex].erase(eDeactivation);
+
+			// Clean up if no more buildings of this type are deactivated
+			if (m_ppiNumDeactivatedBuilding[eIndex].size() == 0)
+			{
+				m_ppiNumDeactivatedBuilding.erase(eIndex);
+			}
+		}
+
+		// Process building effects
+		m_pCity->processBuilding(eIndex, -iChange, false, false, false, true, true); // remember to reverse the sign; +1 deactivated building = -1 building effect
+
+		CvBuildingEntry* buildingEntry = GC.getBuildingInfo(eIndex);
+		if (buildingEntry->IsCityWall())
+		{
+			auto_ptr<ICvPlot1> pDllPlot(new CvDllPlot(m_pCity->plot()));
+			gDLL->GameplayWallCreated(pDllPlot.get());
+		}
+
+		m_pCity->updateStrengthValue();
+
+		// Building might affect City Banner stats
+		auto_ptr<ICvCity1> pCity = GC.WrapCityPointer(m_pCity);
+		GC.GetEngineUserInterface()->SetSpecificCityInfoDirty(pCity.get(), CITY_UPDATE_TYPE_BANNER);
+	}
+}
+#endif
+
 #if defined(MOD_BALANCE_CORE)
 int CvCityBuildings::IsFirstTimeBuilding(BuildingTypes eBuilding)
 {

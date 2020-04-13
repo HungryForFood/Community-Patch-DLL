@@ -225,6 +225,13 @@ void CvTeam::uninit()
 	m_bCivilianKiller = false;
 #endif
 
+#if defined(MOD_GLOBAL_POWER)
+	m_iAllowsPowerCount = 0;
+	m_iTransmitPowerByLand = 0;
+	m_iTransmitPowerByWater = 0;
+	m_piImprovementPowerChange.clear();
+#endif
+
 #if defined(MOD_DIPLOMACY_CIV4_FEATURES)
 	m_iVassalageTradingAllowedCount = 0;
 #endif
@@ -3233,6 +3240,73 @@ void CvTeam::SetCivilianKiller(bool bValue)
 {
 	if(IsCivilianKiller() != bValue)
 		m_bCivilianKiller = bValue;
+}
+#endif
+
+#if defined(MOD_GLOBAL_POWER)
+//	--------------------------------------------------------------------------------
+// Can use power?
+bool CvTeam::CanUsePower() const
+{
+	return m_iAllowsPowerCount > 0;
+}
+//	--------------------------------------------------------------------------------
+// Change can use power count?
+void CvTeam::ChangeAllowsPowerCount(int iChange)
+{
+	m_iAllowsPowerCount += iChange;
+}
+//	--------------------------------------------------------------------------------
+// Can transmit power through road/rail connection?
+bool CvTeam::CanTrasmitPowerByLand() const
+{
+	return m_iTransmitPowerByLand > 0;
+}
+//	--------------------------------------------------------------------------------
+// Can transmit power through road/rail connection?
+void CvTeam::ChangeTrasmitPowerByLandCount(int iChange)
+{
+	m_iTransmitPowerByLand += iChange;
+}
+//	--------------------------------------------------------------------------------
+// Can transmit power through water connection?
+bool CvTeam::CanTrasmitPowerByWater() const
+{
+	return m_iTransmitPowerByWater > 0;
+}
+//	--------------------------------------------------------------------------------
+// Can transmit power through water connection?
+void CvTeam::ChangeTrasmitPowerByWaterCount(int iChange)
+{
+	m_iTransmitPowerByWater += iChange;
+}
+//	--------------------------------------------------------------------------------
+// What is the improvement power change?
+int CvTeam::GetImprovementPowerChange(ImprovementTypes eImprovement) const
+{
+	std::map<ImprovementTypes, int>::const_iterator it = m_piImprovementPowerChange.find(eImprovement);
+	if (it != m_piImprovementPowerChange.end())
+	{
+		return it->second;
+	}
+	return 0;
+}
+//	--------------------------------------------------------------------------------
+// Can transmit power through water connection?
+void CvTeam::ChangeImprovementPowerChange(ImprovementTypes eImprovement, int iChange)
+{
+	if (iChange != 0)
+	{
+		int iPower = m_piImprovementPowerChange[eImprovement] + iChange;
+		if (iPower == 0)
+		{
+			m_piImprovementPowerChange.erase(eImprovement);
+		}
+		else
+		{
+			m_piImprovementPowerChange[eImprovement] = iPower;
+		}
+	}
 }
 #endif
 
@@ -7943,6 +8017,23 @@ void CvTeam::processTech(TechTypes eTech, int iChange)
 		changeEmbarkedExtraMoves(pTech->GetEmbarkedMoveChange() * iChange);
 	}
 
+#if defined(MOD_GLOBAL_POWER)
+	if (pTech->IsAllowsPower())
+	{
+		ChangeAllowsPowerCount(iChange);
+	}
+
+	if (pTech->IsAllowsLandPowerTransmission())
+	{
+		ChangeTrasmitPowerByLandCount(iChange);
+	}
+
+	if (pTech->IsAllowsWaterPowerTransmission())
+	{
+		ChangeTrasmitPowerByWaterCount(iChange);
+	}
+#endif
+
 	for(iI = 0; iI < GC.getNumRouteInfos(); iI++)
 	{
 		changeRouteChange(((RouteTypes)iI), (GC.getRouteInfo((RouteTypes) iI)->getTechMovementChange(eTech) * iChange));
@@ -8032,6 +8123,13 @@ void CvTeam::processTech(TechTypes eTech, int iChange)
 				changeImprovementNoFreshWaterYieldChange(((ImprovementTypes)iI), ((YieldTypes)iJ), (pImprovementEntry->GetTechNoFreshWaterYieldChanges(eTech, iJ) * iChange));
 				changeImprovementFreshWaterYieldChange(((ImprovementTypes)iI), ((YieldTypes)iJ), (pImprovementEntry->GetTechFreshWaterYieldChanges(eTech, iJ) * iChange));
 			}
+
+#if defined(MOD_GLOBAL_POWER)
+			if (MOD_GLOBAL_POWER)
+			{
+				ChangeImprovementPowerChange((ImprovementTypes)iI, pImprovementEntry->GetTechPowerChange(eTech) * iChange);
+			}
+#endif
 		}
 	}
 #if defined(MOD_BALANCE_CORE)
@@ -9177,6 +9275,11 @@ void CvTeam::Read(FDataStream& kStream)
 #if defined(MOD_BALANCE_CORE)
 	kStream >> m_bCivilianKiller;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	kStream >> m_iAllowsPowerCount;
+	kStream >> m_iTransmitPowerByLand;
+	kStream >> m_iTransmitPowerByWater;
+#endif
 
 	kStream >> m_eID;
 
@@ -9407,6 +9510,11 @@ void CvTeam::Write(FDataStream& kStream) const
 	kStream << m_bBrokenCityStatePromise;
 #if defined(MOD_BALANCE_CORE)
 	kStream << m_bCivilianKiller;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	kStream << m_iAllowsPowerCount;
+	kStream << m_iTransmitPowerByLand;
+	kStream << m_iTransmitPowerByWater;
 #endif
 
 	kStream << m_eID;

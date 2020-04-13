@@ -7563,6 +7563,19 @@
 		<Row Tag="TXT_KEY_MONOPOLY_GP_MOD">
 			<Text>[ICON_BULLET] Resource Monopoly Bonus: +{1_num}%</Text>
 		</Row>
+		<!-- Power related text -->
+		<Row Tag="TXT_KEY_NO_ACTION_BUILDING_NEED_POWER">
+			<Text>[NEWLINE]{2_BuildingName:textkey} requires {1_Num} more [ICON_POWER] Power.</Text>
+		</Row>
+		<Row Tag="TXT_KEY_NOTIFICATION_OVER_POWER_LIMIT_CITY">
+			<Text>The {2_City} is currently using more [ICON_POWER] Power than it has! Your {1_Building} has been disabled for the next turn!</Text>
+		</Row>
+		<Row Tag="TXT_KEY_NOTIFICATION_SUMMARY_OVER_POWER_LIMIT_CITY">
+			<Text>The City of {1_City} needs more [ICON_POWER] Power!</Text>
+		</Row>
+		<Row Tag="TXT_KEY_NOTIFICATION_OVER_RESOURCE_LIMIT_CITY_DEACTIVATION">
+			<Text>The City of {2_City} is currently using more {1_Resource:textkey} than you have! Your {3_Building} has been disabled until you fix this problem!</Text>
+		</Row>
 	</Language_en_US>
 	<PostDefines>
 		<Row Name="PROMOTION_DEEPWATER_EMBARKATION">

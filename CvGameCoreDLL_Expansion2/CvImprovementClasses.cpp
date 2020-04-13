@@ -151,6 +151,9 @@ CvImprovementEntry::CvImprovementEntry(void):
 	m_iGrantsVision(0),
 	m_iMovesChange(0),
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	m_iPowerChange(0),
+#endif
 	m_bNoTwoAdjacent(false),
 	m_bAdjacentLuxury(false),
 	m_bAllowsWalkWater(false),
@@ -181,6 +184,9 @@ CvImprovementEntry::CvImprovementEntry(void):
 	m_ppiAdjacentResourceYieldChanges(NULL),
 	m_ppiAdjacentFeatureYieldChanges(NULL),
 	m_ppiFeatureYieldChanges(NULL),
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_piTechPowerChanges(),
 #endif
 	m_ppiTechYieldChanges(NULL),
 	m_ppiTechNoFreshWaterYieldChanges(NULL),
@@ -230,6 +236,9 @@ CvImprovementEntry::~CvImprovementEntry(void)
 	{
 		CvDatabaseUtility::SafeDelete2DArray(m_ppiFeatureYieldChanges);
 	}
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_piTechPowerChanges.clear();
 #endif
 	if(m_paImprovementResource != NULL)
 	{
@@ -346,6 +355,9 @@ bool CvImprovementEntry::CacheResults(Database::Results& kResults, CvDatabaseUti
 	m_bNewOwner = kResults.GetBool("NewOwner");
 	m_bOwnerOnly = kResults.GetBool("OwnerOnly");
 	m_iMovesChange = kResults.GetInt("MovesChange");
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_iPowerChange = kResults.GetInt("PowerChange");
 #endif
 	m_bNoTwoAdjacent = kResults.GetBool("NoTwoAdjacent");
 	m_bAdjacentLuxury = kResults.GetBool("AdjacentLuxury");
@@ -643,6 +655,32 @@ bool CvImprovementEntry::CacheResults(Database::Results& kResults, CvDatabaseUti
 		pResults->Reset();
 	}
 	
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	//m_piTechPowerChanges
+	{
+		std::string strKey("Improvement_TechPowerChanges");
+		Database::Results* pResults = kUtility.GetResults(strKey);
+		if (pResults == NULL)
+		{
+			pResults = kUtility.PrepareResults(strKey, "select Technologies.ID as TechID, Power from Improvement_TechPowerChanges inner join Technologies on TechType = Technologies.Type where ImprovementType = ?");
+		}
+
+		pResults->Bind(1, szImprovementType, lenImprovementType, false);
+
+		while (pResults->Step())
+		{
+			const int iTech = pResults->GetInt(0);
+			const int iPower = pResults->GetInt(1);
+
+			m_piTechPowerChanges[iTech] = iPower;
+		}
+
+		pResults->Reset();
+
+		//Trim extra memory off container since this is mostly read-only.
+		TechPowerChanges(m_piTechPowerChanges).swap(m_piTechPowerChanges);
+	}
 #endif
 	const int iNumTechs = GC.getNumTechInfos();
 	CvAssertMsg(iNumTechs > 0, "Num Tech Infos <= 0");
@@ -1185,6 +1223,12 @@ int CvImprovementEntry::GetGrantsVision() const
 	return m_iGrantsVision;
 }
 #endif
+#if defined(MOD_GLOBAL_POWER)
+int CvImprovementEntry::GetPowerChange() const
+{
+	return m_iPowerChange;
+}
+#endif
 /// Can this improvement not be built adjacent to another one of the same type?
 bool CvImprovementEntry::IsNoTwoAdjacent() const
 {
@@ -1488,6 +1532,22 @@ int CvImprovementEntry::GetFeatureYieldChanges(int i, int j) const
 int* CvImprovementEntry::GetFeatureYieldChangesArray(int i)
 {
 	return m_ppiFeatureYieldChanges[i];
+}
+#endif
+#if defined(MOD_GLOBAL_POWER)
+int CvImprovementEntry::GetTechPowerChange(TechTypes eTechnology) const
+{
+	CvAssertMsg(eTechnology < GC.getNumTechInfos(), "Index out of bounds");
+	CvAssertMsg(eTechnology > -1, "Index out of bounds");
+
+	TechPowerChanges::const_iterator it = m_piTechPowerChanges.find((int)eTechnology);
+
+	if (it != m_piTechPowerChanges.end())
+	{
+		return it->second;
+	}
+
+	return 0;
 }
 #endif
 

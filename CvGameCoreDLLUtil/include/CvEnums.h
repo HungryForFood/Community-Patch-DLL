@@ -3710,3 +3710,14 @@ enum MonopolyTypes
 	NUM_MONOPOLY_TYPES
 };
 #endif
+
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+enum BuildingDeactivationTypes
+{
+	NO_DEACTIVATION = -1,
+	DEACTIVATION_RESOURCE = 0,
+	DEACTIVATION_POWER = 1,
+
+	NUM_DEACTIVATION_TYPES
+};
+#endif

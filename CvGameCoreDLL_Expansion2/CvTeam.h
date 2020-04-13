@@ -122,6 +122,19 @@ public:
 	bool IsCivilianKiller() const;
 	void SetCivilianKiller(bool bValue);
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	bool CanUsePower() const;
+	void ChangeAllowsPowerCount(int iChange);
+
+	bool CanTrasmitPowerByLand() const;
+	void ChangeTrasmitPowerByLandCount(int iChange);
+
+	bool CanTrasmitPowerByWater() const;
+	void ChangeTrasmitPowerByWaterCount(int iChange);
+
+	int GetImprovementPowerChange(ImprovementTypes eImprovement) const;
+	void ChangeImprovementPowerChange(ImprovementTypes eImprovement, int iChange);
+#endif
 
 	PlayerTypes getLeaderID() const;
 	PlayerTypes getSecretaryID() const;
@@ -609,6 +622,12 @@ protected:
 	bool m_bBrokenCityStatePromise;
 #if defined(MOD_BALANCE_CORE)
 	bool m_bCivilianKiller;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	int m_iAllowsPowerCount;
+	int m_iTransmitPowerByLand;
+	int m_iTransmitPowerByWater;
+	std::map<ImprovementTypes, int> m_piImprovementPowerChange;
 #endif
 
 	EraTypes m_eCurrentEra;

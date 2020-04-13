@@ -1385,6 +1385,15 @@ ALTER TABLE Buildings ADD 'NukeInterceptionChance' INTEGER DEFAULT 0;
 -- Table for Lua elements that we don't want shown in Civ selection screen or in Civilopedia
 ALTER TABLE Buildings ADD 'ShowInPedia' BOOLEAN DEFAULT 1;
 
+-- Increase in gold maintenance for the next copy of this building in the city
+ALTER TABLE Buildings ADD GoldMaintenanceOnSubsequentCopy INTEGER DEFAULT 0;
+
+-- Can build multiple copies of the same building in one city
+ALTER TABLE Buildings ADD IsRepeatable BOOLEAN DEFAULT 0;
+
+-- Whats the maximum number of copies we can have in a city, if repeatable
+ALTER TABLE Buildings ADD MaxNumInCity INTEGER DEFAULT 0;
+
 -- Promotion grants additional religious pressure when this unit is garrisoned in the city (if the player has a religion).
 ALTER TABLE UnitPromotions ADD COLUMN 'ReligiousPressureModifier' INTEGER DEFAULT 0;
 
@@ -1549,3 +1558,11 @@ ALTER TABLE Traits
 
 INSERT INTO CustomModDbUpdates(Name, Value) VALUES('TRAITS_EXTRA_SUPPLY', 1);
 
+-- HungryForFood power mod
+
+ALTER TABLE Buildings ADD PowerChange INTEGER DEFAULT 0; -- how much power does this building use or produce; negative for use, positive for production
+ALTER TABLE Buildings ADD AllowsWaterPowerTransmission BOOLEAN DEFAULT 0; -- allows power to be transmitted via naval city connections for this city
+ALTER TABLE Improvements ADD PowerChange INTEGER DEFAULT 0; -- how much fixed power does this improvement produce, city is not required to work it to produce this power; currently can be set to consume power, but no effect for unpowered improvements at the moment
+ALTER TABLE Technologies ADD AllowsPower BOOLEAN DEFAULT 0; -- allows power to be generated and consumed, also handy flag to prevent power related functions from executing too early
+ALTER TABLE Technologies ADD AllowsLandPowerTransmission BOOLEAN DEFAULT 0; -- allows power to be transmitted via road/rail
+ALTER TABLE Technologies ADD AllowsWaterPowerTransmission BOOLEAN DEFAULT 0; -- allows power to be transmitted via naval city connections

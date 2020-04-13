@@ -84,6 +84,11 @@ CvTechEntry::CvTechEntry(void):
 #if defined(MOD_CIV6_EUREKA)
 	m_iEurekaPerMillion(0),
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	m_bAllowsPower(false),
+	m_bAllowsLandPowerTransmission(false),
+	m_bAllowsWaterPowerTransmission(false),
+#endif
 #if defined(MOD_DIPLOMACY_CIV4_FEATURES)
 	m_bVassalageTradingAllowed(false),
 #endif
@@ -174,6 +179,11 @@ bool CvTechEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility& k
 #endif
 #if defined(MOD_CIV6_EUREKA)
 	m_iEurekaPerMillion = kResults.GetInt("EurekaPerMillion");
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_bAllowsPower = kResults.GetBool("AllowsPower");
+	m_bAllowsLandPowerTransmission = kResults.GetBool("AllowsLandPowerTransmission");
+	m_bAllowsWaterPowerTransmission = kResults.GetBool("AllowsWaterPowerTransmission");
 #endif
 
 	//References
@@ -656,6 +666,25 @@ bool CvTechEntry::IsCorporationsEnabled() const
 int CvTechEntry::GetEurekaPerMillion() const
 {
 	return m_iEurekaPerMillion;
+}
+#endif
+#if defined(MOD_GLOBAL_POWER)
+/// Allows power to be generated and consumed
+bool CvTechEntry::IsAllowsPower() const
+{
+	return m_bAllowsPower;
+}
+
+/// Allows power to be transmitted via road/rail
+bool CvTechEntry::IsAllowsLandPowerTransmission() const
+{
+	return m_bAllowsLandPowerTransmission;
+}
+
+/// Allows power to be transmitted via naval city connections
+bool CvTechEntry::IsAllowsWaterPowerTransmission() const
+{
+	return m_bAllowsWaterPowerTransmission;
 }
 #endif
 

@@ -1503,6 +1503,9 @@ void CvLuaPlayer::PushMethods(lua_State* L, int t)
 	Method(GetMilitaryAirMight);
 	Method(GetMilitaryLandMight);
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	Method(GetPowerGrids);
+#endif
 }
 //------------------------------------------------------------------------------
 void CvLuaPlayer::HandleMissingInstance(lua_State* L)
@@ -16410,5 +16413,43 @@ int CvLuaPlayer::lGetMilitaryAirMight(lua_State* L)
 int CvLuaPlayer::lGetMilitaryLandMight(lua_State* L)
 {
 	return BasicLuaMethod(L, &CvPlayerAI::GetMilitaryLandMight);
+}
+#endif
+#if defined(MOD_GLOBAL_POWER)
+//------------------------------------------------------------------------------
+int CvLuaPlayer::lGetPowerGrids(lua_State* L)
+{
+	if (MOD_GLOBAL_POWER)
+	{
+		CvPlayerAI* pkPlayer = GetInstance(L);
+
+		lua_createtable(L, 0, 0);
+		int index = 1;
+
+		CvPlayerPowerGrids* pPlayerPowerGrids = pkPlayer->GetPowerGrids();
+		for (int iPowerGrid = pPlayerPowerGrids->GetFirstPowerGrid(); iPowerGrid != -1; iPowerGrid = pPlayerPowerGrids->GetNextPowerGrid(iPowerGrid))
+		{
+			if (pPlayerPowerGrids->GetNumberOfCitiesInPowerGrid(iPowerGrid) <= 0)
+			{
+				continue;
+			}
+
+			lua_createtable(L, 0, 0);
+			const int t = lua_gettop(L);
+
+			lua_pushinteger(L, iPowerGrid);
+			lua_setfield(L, t, "PowerGridID");
+			lua_pushinteger(L, pPlayerPowerGrids->GetNumberOfCitiesInPowerGrid(iPowerGrid));
+			lua_setfield(L, t, "NumberOfCities");
+			lua_pushinteger(L, pPlayerPowerGrids->GetPowerGenerationInPowerGrid(iPowerGrid));
+			lua_setfield(L, t, "PowerGeneration");
+			lua_pushinteger(L, pPlayerPowerGrids->GetPowerConsumptionInPowerGrid(iPowerGrid));
+			lua_setfield(L, t, "PowerConsumption");
+
+			lua_rawseti(L, -2, index++);
+		}
+
+	}
+	return 1;
 }
 #endif

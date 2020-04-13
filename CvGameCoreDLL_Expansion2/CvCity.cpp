@@ -288,6 +288,9 @@ CvCity::CvCity() :
 	, m_ppaiFeatureYieldChange(0)
 	, m_ppaiTerrainYieldChange(0)
 	, m_pCityBuildings(FNEW(CvCityBuildings, c_eCiv5GameplayDLL, 0))
+#if defined(MOD_GLOBAL_POWER)
+	, m_pCityPower(FNEW(CvCityPower, c_eCiv5GameplayDLL, 0))
+#endif
 	, m_pCityStrategyAI(FNEW(CvCityStrategyAI, c_eCiv5GameplayDLL, 0))
 	, m_pCityCitizens(FNEW(CvCityCitizens, c_eCiv5GameplayDLL, 0))
 	, m_pCityReligions(FNEW(CvCityReligions, c_eCiv5GameplayDLL, 0))
@@ -521,6 +524,9 @@ CvCity::~CvCity()
 
 	uninit();
 
+#if defined(MOD_GLOBAL_POWER)
+	delete m_pCityPower;
+#endif
 	delete m_pCityBuildings;
 	delete m_pCityStrategyAI;
 	delete m_pCityCitizens;
@@ -1452,6 +1458,9 @@ void CvCity::uninit()
 #endif
 
 	m_pCityBuildings->Uninit();
+#if defined(MOD_GLOBAL_POWER)
+	m_pCityPower->Uninit();
+#endif
 	m_pCityStrategyAI->Uninit();
 	m_pCityCitizens->Uninit();
 	m_pCityReligions->Uninit();
@@ -1997,6 +2006,9 @@ void CvCity::reset(int iID, PlayerTypes eOwner, int iX, int iY, bool bConstructo
 		}
 
 		m_pCityBuildings->Init(GC.GetGameBuildings(), this);
+#if defined(MOD_GLOBAL_POWER)
+		m_pCityPower->Init(this);
+#endif
 
 		int iNumUnitInfos = GC.getNumUnitInfos();
 		CvAssertMsg((0 < iNumUnitInfos),  "GC.getNumUnitInfos() is not greater than zero but an array is being allocated in CvCity::reset");
@@ -3115,7 +3127,8 @@ void CvCity::doTurn()
 				}
 			}
 		}
-		if(MOD_BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE)
+#if defined(MOD_BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE) || defined(MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS)
+		if (MOD_BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE || MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS)
 		{
 			int iBad = 0;
 			for (int iResourceLoop = 0; iResourceLoop < GC.getNumResourceInfos(); iResourceLoop++)
@@ -3125,9 +3138,9 @@ void CvCity::doTurn()
 				{
 					const CvResourceInfo* pkResourceInfo = GC.getResourceInfo(eResourceLoop);
 					if(pkResourceInfo != NULL && pkResourceInfo->getResourceUsage() == RESOURCEUSAGE_STRATEGIC)
-					{		
+					{
 						// See if there are any BuildingClass requirements
-						if(GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) > 0)
+						if (GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) > 0 || (MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS && !MOD_BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE))
 						{
 							const int iNumBuildingClassInfos = GC.getNumBuildingClassInfos();
 							const CvCivilizationInfo& thisCivilization = GET_PLAYER(getOwner()).getCivilizationInfo();
@@ -3147,38 +3160,117 @@ void CvCity::doTurn()
 									CvBuildingEntry* pkBuildingInfo = GC.getBuildingInfo(eResourceBuilding);
 									if(pkBuildingInfo)
 									{
-										int iResourceDelta = 0;
-										//If amount we're under is less than resource quantity, take the lesser value.
-										if(GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) < pkBuildingInfo->GetResourceQuantityRequirement(eResourceLoop))
+										if (MOD_BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE)
 										{
-											iResourceDelta = GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop);
-										}
-										//Otherwise, take the building's full value.
-										else
-										{
-											iResourceDelta = pkBuildingInfo->GetResourceQuantityRequirement(eResourceLoop);
-										}
-										if(iResourceDelta > 0)
-										{
-											iBad += (iResourceDelta * 2);
-											GET_PLAYER(getOwner()).changeResourceOverValue(eResourceLoop, -iResourceDelta);
-											if(GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) < 0)
+											int iResourceDelta = 0;
+											//If amount we're under is less than resource quantity, take the lesser value.
+											if (GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) < pkBuildingInfo->GetResourceQuantityRequirement(eResourceLoop))
 											{
-												GET_PLAYER(getOwner()).setResourceOverValue(eResourceLoop, 0);
+												iResourceDelta = GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop);
 											}
-											CvNotifications* pNotifications = GET_PLAYER(getOwner()).GetNotifications();
-											if(pNotifications)
+											//Otherwise, take the building's full value.
+											else
 											{
-												Localization::String strText = Localization::Lookup("TXT_KEY_NOTIFICATION_OVER_RESOURCE_LIMIT_CITY");
-												strText << pkResourceInfo->GetTextKey();
-												strText << getNameKey();
-												strText << (iResourceDelta * 2);
-												Localization::String strSummary = Localization::Lookup("TXT_KEY_NOTIFICATION_SUMMARY_OVER_RESOURCE_LIMIT_CITY");
-												strSummary << pkResourceInfo->GetTextKey();
-												strSummary << getNameKey();
-												pNotifications->Add(NOTIFICATION_DISCOVERED_STRATEGIC_RESOURCE, strText.toUTF8(), strSummary.toUTF8(), getX(), getY(), eResourceLoop);
+												iResourceDelta = pkBuildingInfo->GetResourceQuantityRequirement(eResourceLoop);
+											}
+											if (iResourceDelta > 0)
+											{
+												iBad += (iResourceDelta * 2);
+
+												CvNotifications* pNotifications = GET_PLAYER(getOwner()).GetNotifications();
+												if (pNotifications)
+												{
+													Localization::String strText = Localization::Lookup("TXT_KEY_NOTIFICATION_OVER_RESOURCE_LIMIT_CITY");
+													strText << pkResourceInfo->GetTextKey();
+													strText << getNameKey();
+													strText << (iResourceDelta * 2);
+													Localization::String strSummary = Localization::Lookup("TXT_KEY_NOTIFICATION_SUMMARY_OVER_RESOURCE_LIMIT_CITY");
+													strSummary << pkResourceInfo->GetTextKey();
+													strSummary << getNameKey();
+													pNotifications->Add(NOTIFICATION_DISCOVERED_STRATEGIC_RESOURCE, strText.toUTF8(), strSummary.toUTF8(), getX(), getY(), eResourceLoop);
+												}
+
+												GET_PLAYER(getOwner()).changeResourceOverValue(eResourceLoop, -iResourceDelta);
+												if (GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop) < 0)
+												{
+													GET_PLAYER(getOwner()).setResourceOverValue(eResourceLoop, 0);
+													break; // stop iterating through buildings once resource over value becomes 0.
+												}
+
 											}
 										}
+#if defined(MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS) && defined(MOD_BUILDINGS_DEACTIVATION)
+										else if (MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS && MOD_BUILDINGS_DEACTIVATION)
+										{
+											int iResourceDelta = pkBuildingInfo->GetResourceQuantityRequirement(eResourceLoop);
+
+											if (iResourceDelta > 0)
+											{
+												int iNumBuilding = GetCityBuildings()->GetNumBuilding(eResourceBuilding);
+												int iNumDeactivatedBuilding = GetCityBuildings()->GetNumDeactivatedBuilding(eResourceBuilding); // from all sources
+												int iNumUnfueledBuilding = GetCityBuildings()->GetNumDeactivatedBuilding(eResourceBuilding, DEACTIVATION_RESOURCE); // from being unpowered
+												int iNumActiveBuilding = iNumBuilding - iNumDeactivatedBuilding;
+												int iResourceOverValue = GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop);
+
+												// deactivate buildings while we are still over the limit
+												if (iResourceOverValue > 0 && iNumBuilding > 0)
+												{
+													int iNumBuildingUnpoweredAtEnd = ((iResourceOverValue + iResourceDelta - 1) / iResourceDelta); // for int, (x + y - 1) / y gives the same result as ceil(x / y) for float
+													int iNumBuildingToDeactivate = MIN(iNumBuildingUnpoweredAtEnd - iNumDeactivatedBuilding, iNumActiveBuilding); // cant deactivate more buildings then we have
+													int iNumBuildingToActivate = MAX(iNumUnfueledBuilding - iNumBuildingUnpoweredAtEnd, 0);
+													for (int iI = 0; iI < iNumBuilding; iI++)
+													{
+														if (iNumBuildingToDeactivate > 0)
+														{
+															for (int iJ = 0; iJ < iNumBuildingToDeactivate; iJ++)
+															{
+																GetCityBuildings()->SetNumDeactivatedBuilding(eResourceBuilding, DEACTIVATION_RESOURCE, GetCityBuildings()->GetNumDeactivatedBuilding(eResourceBuilding, DEACTIVATION_RESOURCE) + 1);
+
+																// notifications
+																CvNotifications* pNotifications = GET_PLAYER(getOwner()).GetNotifications();
+																if (pNotifications)
+																{
+																	Localization::String strText = Localization::Lookup("TXT_KEY_NOTIFICATION_OVER_RESOURCE_LIMIT_CITY_DEACTIVATION");
+																	strText << pkResourceInfo->GetTextKey();
+																	strText << getNameKey();
+																	strText << pkBuildingInfo->GetDescriptionKey();
+																	Localization::String strSummary = Localization::Lookup("TXT_KEY_NOTIFICATION_SUMMARY_OVER_RESOURCE_LIMIT_CITY");
+																	strSummary << pkResourceInfo->GetTextKey();
+																	strSummary << getNameKey();
+																	pNotifications->Add(NOTIFICATION_DISCOVERED_STRATEGIC_RESOURCE, strText.toUTF8(), strSummary.toUTF8(), getX(), getY(), eResourceLoop);
+																}
+															}
+														}
+														else if (iNumBuildingToActivate > 0)
+														{
+															for (int iJ = 0; iJ < iNumBuildingToActivate; iJ++)
+															{
+																if (iNumUnfueledBuilding > 0)
+																{
+																	iNumUnfueledBuilding--;
+																	GetCityBuildings()->SetNumDeactivatedBuilding(eResourceBuilding, DEACTIVATION_RESOURCE, iNumUnfueledBuilding);
+																}
+															}
+														}
+
+														if (iResourceDelta > GET_PLAYER(getOwner()).getResourceOverValue(eResourceLoop))
+														{
+															GET_PLAYER(getOwner()).setResourceOverValue(eResourceLoop, 0);
+														}
+														else
+														{
+															GET_PLAYER(getOwner()).changeResourceOverValue(eResourceLoop, -iResourceDelta);
+														}
+													}
+												}
+												// re-activate buildings if we are within our limit
+												else if (iResourceOverValue == 0 && iNumDeactivatedBuilding > 0)
+												{
+													GetCityBuildings()->SetNumDeactivatedBuilding(eResourceBuilding, DEACTIVATION_RESOURCE, 0);
+												}
+											}
+										}
+#endif
 									}
 								}
 							}
@@ -3195,6 +3287,7 @@ void CvCity::doTurn()
 				 SetExtraBuildingMaintenance(0);
 			}
 		}
+#endif
 	}
 	setHappinessDelta(getHappinessDelta());
 #endif
@@ -8498,10 +8591,21 @@ bool CvCity::canConstruct(BuildingTypes eBuilding, bool bContinue, bool bTestVis
 	}
 #endif
 
+#if defined(MOD_BALANCE_CORE)
+	if(m_pCityBuildings->GetNumBuilding(eBuilding) >= GC.getCITY_MAX_NUM_BUILDINGS() && !pkBuildingInfo->IsRepeatable())
+#else
 	if(m_pCityBuildings->GetNumBuilding(eBuilding) >= GC.getCITY_MAX_NUM_BUILDINGS())
+#endif
 	{
 		return false;
 	}
+
+#if defined(MOD_BALANCE_CORE)
+	if (pkBuildingInfo->IsRepeatable() && pkBuildingInfo->GetMaxNumInCity() > 0 && m_pCityBuildings->GetNumBuilding(eBuilding) >= pkBuildingInfo->GetMaxNumInCity())
+	{
+		return false;
+	}
+#endif
 
 	if(!isValidBuildingLocation(eBuilding))
 	{
@@ -8771,6 +8875,39 @@ bool CvCity::canConstruct(BuildingTypes eBuilding, bool bContinue, bool bTestVis
 				}
 			}
 		}
+#if defined(MOD_GLOBAL_POWER)
+		if (MOD_GLOBAL_POWER)
+		{
+			int iPowerRequirement = -pkBuildingInfo->GetPowerChange();
+			if (iPowerRequirement > 0)
+			{
+				if (bContinue)
+				{
+					iPowerRequirement = 0; // already deducted when we started contruction
+				}
+				int iPowerGrid = GET_PLAYER(getOwner()).GetPowerGrids()->GetPowerGridID(this);
+				// city does not belong to a power grid, eg power transmission tech has not been completed yet or no other city connected to it
+				if (iPowerGrid == -1 || (iPowerGrid != -1 && GET_PLAYER(getOwner()).GetPowerGrids()->GetNumberOfCitiesInPowerGrid(iPowerGrid) <= 1))
+				{
+					if ((GetCityPower()->GetPowerGeneration() - GetCityPower()->GetPowerConsumption()) < iPowerRequirement)
+					{
+						int iShortage = iPowerRequirement - (GetCityPower()->GetPowerGeneration() - GetCityPower()->GetPowerConsumption());
+						GC.getGame().BuildCannotPerformActionHelpText(toolTipSink, "TXT_KEY_NO_ACTION_BUILDING_NEED_POWER", pkBuildingInfo->GetTextKey(), "", iShortage);
+						if (toolTipSink == NULL)
+							return false;
+					}
+				}
+				// city belongs to a power grid
+				else if (GET_PLAYER(getOwner()).GetPowerGrids()->GetPowerSurplusInPowerGrid(iPowerGrid) < iPowerRequirement)
+				{
+					int iShortage = iPowerRequirement - GET_PLAYER(getOwner()).GetPowerGrids()->GetPowerSurplusInPowerGrid(iPowerGrid);
+					GC.getGame().BuildCannotPerformActionHelpText(toolTipSink, "TXT_KEY_NO_ACTION_BUILDING_NEED_POWER", pkBuildingInfo->GetTextKey(), "", iShortage);
+					if (toolTipSink == NULL)
+						return false;
+				}
+			}
+		}
+#endif
 	}
 
 	// Locked Buildings (Mutually Exclusive Buildings?) - not quite sure how this works
@@ -13778,7 +13915,7 @@ void CvCity::processResource(ResourceTypes eResource, int iChange)
 
 //	--------------------------------------------------------------------------------
 #if defined(MOD_BALANCE_CORE)
-void CvCity::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete, bool /*bApplyingAllCitiesBonus*/, bool bNoBonus)
+void CvCity::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete, bool /*bApplyingAllCitiesBonus*/, bool bNoBonus, bool bActivation)
 #else
 void CvCity::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete, bool /*bApplyingAllCitiesBonus*/)
 #endif
@@ -15138,7 +15275,7 @@ void CvCity::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, 
 				UpdateYieldFromCorporationFranchises((YieldTypes)iI);
 			}
 		}
-		if (pBuildingInfo->GetSpecialistType() != NO_SPECIALIST && pBuildingInfo->GetSpecialistCount() > 0)
+		if (pBuildingInfo->GetSpecialistType() != NO_SPECIALIST && pBuildingInfo->GetSpecialistCount() > 0 && !bActivation) // bActivation check is to prevent this from executing when we deactivate buildings (UI trouble)
 		{
 			GetCityCitizens()->ChangeNumSpecialistSlots((SpecialistTypes)pBuildingInfo->GetSpecialistType(), (pBuildingInfo->GetSpecialistCount() * iChange));
 		}
@@ -15187,6 +15324,26 @@ void CvCity::processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, 
 				{
 					ChangeGreatPersonProgressFromConstruction((GreatPersonTypes)it->first, (EraTypes)it->second.first, it->second.second);
 				}
+			}
+		}
+#endif
+
+#if defined(MOD_GLOBAL_POWER)
+		if (MOD_GLOBAL_POWER)
+		{
+			if (pBuildingInfo->GetPowerChange() > 0)
+			{
+				m_pCityPower->ChangePowerGenerationFromBuildings(pBuildingInfo->GetPowerChange() * iChange);
+			}
+			else if (pBuildingInfo->GetPowerChange() < 0 && !bActivation) // consumption should still take effect when buildings are deactivated
+			{
+				m_pCityPower->ChangePowerConsumptionFromBuildings(pBuildingInfo->GetPowerChange() * -1 * iChange);
+				m_pCityPower->ChangeNumPowerConsumingBuilding(eBuilding, iChange);
+			}
+
+			if (pBuildingInfo->IsAllowsWaterPowerTransmission())
+			{
+				m_pCityPower->ChangeAllowsWaterPowerTransmissionCount(iChange);
 			}
 		}
 #endif
@@ -27859,6 +28016,16 @@ CvCityBuildings* CvCity::GetCityBuildings() const
 	return m_pCityBuildings;
 }
 
+#if defined(MOD_GLOBAL_POWER)
+//	--------------------------------------------------------------------------------
+CvCityPower* CvCity::GetCityPower() const
+{
+	VALIDATE_OBJECT
+	return m_pCityPower;
+}
+
+#endif
+
 //	--------------------------------------------------------------------------------
 int CvCity::getUnitProduction(UnitTypes eIndex)	const
 {
@@ -29702,22 +29869,22 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 		break;
 
 	case ORDER_CONSTRUCT:
-			{
+	{
 		eConstructBuilding = ((BuildingTypes)(pOrderNode->iData1));
 
 		CvBuildingEntry* pkBuildingInfo = GC.getBuildingInfo(eConstructBuilding);
 
 		if(pkBuildingInfo)
-				{
+		{
 			kOwner.changeBuildingClassMaking(((BuildingClassTypes)(pkBuildingInfo->GetBuildingClassType())), -1);
 
 			if(bFinish)
-					{
+			{
 				produce(eConstructBuilding);
 			}
-					}
+		}
 		break;
-				}
+	}
 
 	case ORDER_CREATE:
 		eCreateProject = ((ProjectTypes)(pOrderNode->iData1));
@@ -29726,28 +29893,28 @@ void CvCity::popOrder(int iNum, bool bFinish, bool bChoose)
 		kOwner.changeProjectMaking(eCreateProject, -1);
 
 		if(bFinish)
-									{
+		{
 			produce(eCreateProject);
-									}
+		}
 		break;
 
 	case ORDER_PREPARE:
 
 		if(bFinish)
-									{
+		{
 			eSpecialist = (SpecialistTypes)(pOrderNode->iData1);
 			produce(eSpecialist);
-									}
+		}
 
 		break;
 
 	case ORDER_MAINTAIN:
 #if defined(MOD_BALANCE_CORE)
 		if ((ProcessTypes)pOrderNode->iData1 != NO_PROCESS)
-									{
+		{
 			CvProcessInfo* pkProcessInfo = GC.getProcessInfo((ProcessTypes)pOrderNode->iData1);
 			if (pkProcessInfo && pkProcessInfo->getDefenseValue() != 0)
-										{
+			{
 				bUpdateStrength = true;
 			}
 		}
@@ -32411,9 +32578,17 @@ bool CvCity::doCheckProduction()
 											const BuildingClassTypes eOrderBuildingClass = (BuildingClassTypes)pkOrderBuildingInfo->GetBuildingClassType();
 											const BuildingClassTypes eUpgradeBuildingClass = (BuildingClassTypes)pkUpgradeBuildingInfo->GetBuildingClassType();
 
+#if defined(MOD_GLOBAL_POWER)
+											thisPlayer.changeBuildingClassMaking(eOrderBuildingClass, -1, this);
+#else
 											thisPlayer.changeBuildingClassMaking(eOrderBuildingClass, -1);
+#endif
 											pOrderNode->iData1 = eUpgradeBuilding;
+#if defined(MOD_GLOBAL_POWER)
+											thisPlayer.changeBuildingClassMaking(eUpgradeBuildingClass, 1, this);
+#else
 											thisPlayer.changeBuildingClassMaking(eUpgradeBuildingClass, 1);
+#endif
 
 										}
 									}
@@ -32717,6 +32892,9 @@ void CvCity::read(FDataStream& kStream)
 #endif
 
 	m_pCityBuildings->Read(kStream);
+#if defined(MOD_GLOBAL_POWER)
+	m_pCityPower->Read(kStream);
+#endif
 
 	UINT uLength;
 	kStream >> uLength;
@@ -32879,6 +33057,9 @@ VALIDATE_OBJECT
 #endif
 
 	m_pCityBuildings->Write(kStream);
+#if defined(MOD_GLOBAL_POWER)
+	m_pCityPower->Write(kStream);
+#endif
 
 	//  Write m_orderQueue
 	UINT uLength = (UINT)m_orderQueue.getLength();

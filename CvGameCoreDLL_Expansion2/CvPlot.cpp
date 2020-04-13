@@ -340,6 +340,9 @@ void CvPlot::reset(int iX, int iY, bool bConstructorCall)
 	m_bIsTradeUnitRoute = false;
 	m_iLastTurnBuildChanged = 0;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	m_iPowerChange = 0;
+#endif
 }
 
 //////////////////////////////////////
@@ -10734,11 +10737,77 @@ void CvPlot::updateYieldFast(CvCity* pOwningCity, const CvReligion* pMajorityRel
 		}
 	}
 
+#if defined(MOD_GLOBAL_POWER)
+	if (MOD_GLOBAL_POWER) // piggyback this function for convenience, and to avoid looping through the same things twice
+	{
+		updatePowerChange(pOwningCity);
+	}
+#endif
+
 	if(bChange)
 	{
 		updateSymbols();
 	}
 }
+
+#if defined(MOD_GLOBAL_POWER)
+//	--------------------------------------------------------------------------------
+void CvPlot::updatePowerChange()
+{
+	updatePowerChange(getOwningCity());
+}
+//	--------------------------------------------------------------------------------
+void CvPlot::updatePowerChange(CvCity* pOwningCity)
+{
+	int iNewPower = 0;
+	int iOldPower = getPowerChange();
+
+	ImprovementTypes eImprovement = getImprovementType();
+	if (eImprovement != NO_IMPROVEMENT)
+	{
+		iNewPower += GC.getImprovementInfo(eImprovement)->GetPowerChange();
+		TeamTypes eTeam = getTeam();
+
+		if (eTeam != NO_TEAM)
+		{
+			iNewPower += GET_TEAM(eTeam).GetImprovementPowerChange(eImprovement);
+		}
+	}
+
+	if (iNewPower != iOldPower)
+	{
+		m_iPowerChange = iNewPower;
+
+		if (pOwningCity != NULL)
+		{
+			// undo old power generation
+			if (iOldPower > 0)
+			{
+				pOwningCity->GetCityPower()->ChangePowerGenerationFromTerrain(iOldPower * -1);
+			}
+			// undo old power consumption
+			else if (iOldPower < 0)
+			{
+				pOwningCity->GetCityPower()->ChangePowerConsumptionFromTerrain(iOldPower);
+			}
+			// apply new power generation
+			if (iNewPower > 0)
+			{
+				pOwningCity->GetCityPower()->ChangePowerGenerationFromTerrain(iNewPower);
+			}
+			else if (iNewPower < 0)
+			{
+				pOwningCity->GetCityPower()->ChangePowerConsumptionFromTerrain(iNewPower * -1);
+			}
+		}
+	}
+}
+//	--------------------------------------------------------------------------------
+int CvPlot::getPowerChange() const
+{
+	return m_iPowerChange;
+}
+#endif
 
 #if defined(MOD_BALANCE_CORE_SETTLER)
 
@@ -13028,6 +13097,9 @@ void CvPlot::read(FDataStream& kStream)
 	kStream >> m_bIsTradeUnitRoute;
 	kStream >> m_iLastTurnBuildChanged;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	kStream >> m_iPowerChange;
+#endif
 }
 
 //	--------------------------------------------------------------------------------
@@ -13181,6 +13253,9 @@ void CvPlot::write(FDataStream& kStream) const
 #if defined(MOD_BALANCE_CORE)
 	kStream << m_bIsTradeUnitRoute;
 	kStream << m_iLastTurnBuildChanged;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	kStream << m_iPowerChange;
 #endif
 }
 

@@ -121,6 +121,11 @@ public:
 #if defined(MOD_CIV6_EUREKA)
 	int GetEurekaPerMillion() const;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	bool IsAllowsPower() const;
+	bool IsAllowsLandPowerTransmission() const;
+	bool IsAllowsWaterPowerTransmission() const;
+#endif
 
 private:
 	int m_iAIWeight;
@@ -197,6 +202,11 @@ private:
 #endif
 #if defined(MOD_CIV6_EUREKA)
 	int m_iEurekaPerMillion;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	bool m_bAllowsPower;
+	bool m_bAllowsLandPowerTransmission;
+	bool m_bAllowsWaterPowerTransmission;
 #endif
 
 #if defined(MOD_DIPLOMACY_CIV4_FEATURES)

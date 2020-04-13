@@ -164,6 +164,9 @@ typedef wchar_t          wchar;
 #include "CvCorporationClasses.h"
 #include "CvContractClasses.h"
 #endif
+#if defined(MOD_GLOBAL_POWER)
+#include "CvPowerGrids.h"
+#endif
 
 using namespace fastdelegate;
 

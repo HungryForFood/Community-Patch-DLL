@@ -817,6 +817,25 @@ void CvLuaCity::PushMethods(lua_State* L, int t)
 	Method(GetYieldFromDevelopment);
 	Method(SetYieldFromDevelopment);
 #endif
+
+#if defined(MOD_GLOBAL_POWER)
+	Method(GetPowerGridID);
+
+	Method(GetPowerGenerationFromBuildings);
+	Method(GetPowerConsumptionFromBuildings);
+
+	Method(GetPowerGenerationFromTerrain);
+	Method(GetPowerConsumptionFromTerrain);
+
+	Method(GetPowerExport);
+	Method(GetPowerImport);
+
+	Method(GetNetPower);
+#endif
+
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+	Method(GetNumDeactivatedBuilding);
+#endif
 }
 //------------------------------------------------------------------------------
 void CvLuaCity::HandleMissingInstance(lua_State* L)
@@ -6772,4 +6791,88 @@ int CvLuaCity::lSetYieldFromDevelopment(lua_State* L)
 	return 1;
 }
 
+#endif
+
+#if defined(MOD_GLOBAL_POWER)
+int CvLuaCity::lGetPowerGridID(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? GET_PLAYER(pkCity->getOwner()).GetPowerGrids()->GetPowerGridID(pkCity) : -1;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+
+int CvLuaCity::lGetPowerGenerationFromBuildings(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerGenerationFromBuildings() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+int CvLuaCity::lGetPowerConsumptionFromBuildings(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerConsumptionFromBuildings() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+
+int CvLuaCity::lGetPowerGenerationFromTerrain(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerGenerationFromTerrain() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+int CvLuaCity::lGetPowerConsumptionFromTerrain(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerConsumptionFromTerrain() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+
+int CvLuaCity::lGetPowerExport(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerExport() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+int CvLuaCity::lGetPowerImport(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const int iValue = MOD_GLOBAL_POWER ? pkCity->GetCityPower()->GetPowerImport() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+
+int CvLuaCity::lGetNetPower(lua_State* L)
+{
+	CvCityPower* pkCityPower = GetInstance(L)->GetCityPower();
+	const int iValue = MOD_GLOBAL_POWER ? pkCityPower->GetPowerGeneration() + pkCityPower->GetPowerImport() - pkCityPower->GetPowerConsumption() - pkCityPower->GetPowerExport() : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
+#endif
+
+#if defined(MOD_BUILDINGS_DEACTIVATION)
+int CvLuaCity::lGetNumDeactivatedBuilding(lua_State* L)
+{
+	CvCity* pkCity = GetInstance(L);
+	const BuildingTypes eBuilding = (BuildingTypes)lua_tointeger(L, 2);
+	const BuildingDeactivationTypes eDeactivation = (BuildingDeactivationTypes)lua_tointeger(L, 3);
+	const int iValue = MOD_BUILDINGS_DEACTIVATION ? pkCity->GetCityBuildings()->GetNumDeactivatedBuilding(eBuilding, eDeactivation) : 0;
+	lua_pushinteger(L, iValue);
+
+	return 1;
+}
 #endif

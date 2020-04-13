@@ -1475,6 +1475,11 @@
 			<IconFontTexture>ICON_FONT_TEXTURE_CULTURE_LOCAL</IconFontTexture>
 			<IconMapping>1</IconMapping>
 		</Row>
+		<Row>
+			<IconName>ICON_POWER</IconName>
+			<IconFontTexture>ICON_FONT_TEXTURE_DEFAULT</IconFontTexture>
+			<IconMapping>4</IconMapping>
+		</Row>
 	</IconFontMapping>
 	<Yields>
 		<Row>
@@ -1570,4 +1575,11 @@
 			<NotificationType>NOTIFICATION_PRODUCTION_COST_MODIFIERS_FROM_RESOURCES</NotificationType>
 		</Row>
 	</Notifications>
+	<!-- HungryForFood power mod -->
+	<!-- How much additional power per improvement to produce/consume when tech is unlocked? Negative for consume, positive for produce. -->
+	<Table name="Improvement_TechPowerChanges">
+		<Column name="ImprovementType" type="text" notnull="true" reference="Improvements(Type)"/>
+		<Column name="TechType" type="text" reference="Technologies(Type)"/>
+		<Column name="Power" type="integer" default="0"/>
+	</Table>
 </GameData>

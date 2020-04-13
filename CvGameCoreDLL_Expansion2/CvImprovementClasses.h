@@ -150,6 +150,9 @@ public:
 	bool IsAdjacentCity() const;
 	int GetGrantsVision() const;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	int GetPowerChange() const;
+#endif
 	bool IsNoTwoAdjacent() const;
 	bool IsAdjacentLuxury() const;
 	bool IsAllowsWalkWater() const;
@@ -228,6 +231,12 @@ public:
 
 	int  GetImprovementResourceDiscoverRand(int i) const;
 	int  GetFlavorValue(int i) const;
+
+#if defined(MOD_GLOBAL_POWER)
+	int GetTechPowerChange(TechTypes eTech) const;
+
+	typedef std::map<int, int> TechPowerChanges;
+#endif
 
 	//---------------------------------------PROTECTED MEMBER VARIABLES---------------------------------
 protected:
@@ -324,6 +333,9 @@ protected:
 	bool m_bAdjacentCity;
 	bool m_iGrantsVision;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	int m_iPowerChange;
+#endif
 	bool m_bNoTwoAdjacent;
     bool m_bAdjacentLuxury;
 	bool m_bAllowsWalkWater;
@@ -364,12 +376,17 @@ protected:
 	int** m_ppiFeatureYieldChanges;
 #endif
 
+#if defined(MOD_GLOBAL_POWER)
+	TechPowerChanges m_piTechPowerChanges;
+#endif
+
 	int** m_ppiTechYieldChanges;
 	int** m_ppiTechNoFreshWaterYieldChanges;
 	int** m_ppiTechFreshWaterYieldChanges;
 	int** m_ppiRouteYieldChanges;
 
 	CvImprovementResourceInfo* m_paImprovementResource;
+
 };
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

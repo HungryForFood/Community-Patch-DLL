@@ -27,6 +27,9 @@ class CvPlot;
 class CvArea;
 class CvGenericBuilding;
 class CvCityBuildings;
+#if defined(MOD_GLOBAL_POWER)
+class CvCityPower;
+#endif
 class CvCityStrategyAI;
 class CvCityCitizens;
 class CvCityEmphases;
@@ -451,7 +454,7 @@ public:
 
 	void processResource(ResourceTypes eResource, int iChange);
 #if defined(MOD_BALANCE_CORE)
-	void processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete = false, bool bApplyingAllCitiesBonus = false, bool bNoBonus = false);
+	void processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete = false, bool bApplyingAllCitiesBonus = false, bool bNoBonus = false, bool bActivation = false);
 #else
 	void processBuilding(BuildingTypes eBuilding, int iChange, bool bFirst, bool bObsolete = false, bool bApplyingAllCitiesBonus = false);
 #endif
@@ -1410,6 +1413,10 @@ public:
 
 	CvCityBuildings* GetCityBuildings() const;
 
+#if defined(MOD_GLOBAL_POWER)
+	CvCityPower* GetCityPower() const;
+#endif
+
 	int getProjectProduction(ProjectTypes eIndex) const;
 	void setProjectProduction(ProjectTypes eIndex, int iNewValue);
 	void changeProjectProduction(ProjectTypes eIndex, int iChange);
@@ -2155,6 +2162,9 @@ protected:
 #endif
 
 	CvCityBuildings* m_pCityBuildings;
+#if defined(MOD_GLOBAL_POWER)
+	CvCityPower* m_pCityPower;
+#endif
 	CvCityStrategyAI* m_pCityStrategyAI;
 	CvCityCitizens* m_pCityCitizens;
 	CvCityReligions* m_pCityReligions;

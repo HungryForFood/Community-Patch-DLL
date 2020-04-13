@@ -53,6 +53,9 @@ class CvDangerPlots;
 	class CvPlayerCorporations;
 	class CvPlayerContracts;
 #endif
+#if defined(MOD_GLOBAL_POWER)
+class CvPlayerPowerGrids;
+#endif
 class CvCityConnections;
 class CvNotifications;
 class CvTreasury;
@@ -2272,7 +2275,11 @@ public:
 	bool isBuildingClassMaxedOut(BuildingClassTypes eIndex, int iExtra = 0) const;
 	void changeBuildingClassCount(BuildingClassTypes eIndex, int iChange);
 	int getBuildingClassMaking(BuildingClassTypes eIndex) const;
+#if defined(MOD_GLOBAL_POWER)
+	void changeBuildingClassMaking(BuildingClassTypes eIndex, int iChange, CvCity* pCity = NULL);
+#else
 	void changeBuildingClassMaking(BuildingClassTypes eIndex, int iChange);
+#endif
 	int getBuildingClassCountPlusMaking(BuildingClassTypes eIndex) const;
 
 	int getProjectMaking(ProjectTypes eIndex) const;
@@ -2733,6 +2740,9 @@ public:
 #if defined(MOD_BALANCE_CORE)
 	CvPlayerCorporations* GetCorporations() const;
 	CvPlayerContracts* GetContracts() const;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	CvPlayerPowerGrids* GetPowerGrids() const;
 #endif
 #if defined(MOD_API_EXTENSIONS)
 	int AddNotification(NotificationTypes eNotificationType, const char* sMessage, const char* sSummary, CvPlot* pPlot = NULL, int iGameDataIndex = -1, int iExtraGameData = -1);
@@ -3682,6 +3692,11 @@ protected:
 #if defined(MOD_BALANCE_CORE)
 	CvPlayerCorporations* m_pCorporations;
 	CvPlayerContracts* m_pContracts;
+#endif
+
+#if defined(MOD_GLOBAL_POWER)
+	// Power
+	CvPlayerPowerGrids* m_pPowerGrids;
 #endif
 
 	// AI Tactics

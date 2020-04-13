@@ -1500,6 +1500,9 @@ protected:
 	static int lGetMilitaryAirMight(lua_State* L);
 	static int lGetMilitaryLandMight(lua_State* L);
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	static int lGetPowerGrids(lua_State* L);
+#endif
 };
 
 #endif //CVLUAPLAYER_H

@@ -218,6 +218,9 @@
     <!-- Allows faith purchase of buildings in puppets -->
     <Row Class="6" Name="GLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS" Value="0"/>
 
+    <!-- Enables power related tables and functions -->
+    <Row Class="6" Name="GLOBAL_POWER" Value="0"/>
+
     <!-- Tech bonuses from other teams require an embassy or spy in their capital and not from just having met them (v30) -->
     <!-- See also: "Diplomacy - Tech Bonuses" -->
     <Row Class="6" Name="DIPLOMACY_TECH_BONUSES" Value="0"/>
@@ -384,6 +387,9 @@
     <!-- Permit cities to work additional slots (tiles and specialists) with automatons (v90) -->
     <!-- See also: "Global - City Automaton Workers" -->
     <Row Class="2" Name="BUILDINGS_CITY_AUTOMATON_WORKERS" Value="0"/>
+
+    <!-- Allows buildings to be deactivated -->
+    <Row Class="5" Name="BUILDINGS_DEACTIVATION" Value="0"/>
 
     <!-- Scales trade routes based on map size and game speed (v52) -->
     <Row Class="5" Name="TRADE_ROUTE_SCALING" Value="0" DbUpdates="1"/>
@@ -1101,6 +1107,8 @@
 	<Row Class="6" Name="BALANCE_CORE_RANGED_ATTACK_PENALTY" Value="0"/>
 	<!-- If true, no lua hooks are called from the game core, increasing performance and stability -->
 	<Row Class="6" Name="CORE_DISABLE_LUA_HOOKS" Value="0"/>
+	<!-- Lack of resource will deactivate buildings; BALANCE_CORE_BUILDING_RESOURCE_MAINTENANCE must be off amd BUILDINGS_DEACTIVATION must be on -->
+	<Row Class="6" Name="BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS" Value="0"/>
 	<!-- Roads are built automatically when a trade route end. -->
 	<Row Class="6" Name="CIV6_ROADS" Value="0"/>
 	<!-- You can use the BuilderStrength to limit the number of improvement and repair a unit can makes. -->

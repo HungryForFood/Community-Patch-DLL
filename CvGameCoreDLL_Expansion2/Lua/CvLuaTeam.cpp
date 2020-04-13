@@ -261,6 +261,10 @@ void CvLuaTeam::PushMethods(lua_State* L, int t)
 #if defined(MOD_BALANCE_CORE)
 	Method(IsCorporationsEnabled);
 #endif
+
+#if defined(MOD_GLOBAL_POWER)
+	Method(IsPowerEnabled);
+#endif
 }
 //------------------------------------------------------------------------------
 const char* CvLuaTeam::GetTypeName()
@@ -1583,5 +1587,12 @@ int CvLuaTeam::lGetNumVassals(lua_State *L)
 int CvLuaTeam::lIsCorporationsEnabled(lua_State *L)
 {
 	return BasicLuaMethod(L, &CvTeam::IsCorporationsEnabled);
+}
+#endif
+
+#if defined(MOD_GLOBAL_POWER)
+int CvLuaTeam::lIsPowerEnabled(lua_State *L)
+{
+	return BasicLuaMethod(L, &CvTeam::CanUsePower);
 }
 #endif

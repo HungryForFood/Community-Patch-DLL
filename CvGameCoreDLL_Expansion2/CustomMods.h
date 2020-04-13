@@ -266,6 +266,8 @@
 #define MOD_GLOBAL_TRULY_FREE_GP                    gCustomMods.isGLOBAL_TRULY_FREE_GP()
 // Allows faith purchase of buildings in puppets
 #define MOD_GLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS	gCustomMods.isGLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS()
+// Adds a power system, similar to civ 6, with some minor differences
+#define MOD_GLOBAL_POWER							gCustomMods.isGLOBAL_POWER()
 // No auto spawn great prophets for human players, must select pulldown menu in Lua when you are ready to spawn one, only pre-Industrial era
 #define MOD_NO_AUTO_SPAWN_PROPHET					gCustomMods.isNO_AUTO_SPAWN_PROPHET()
 // Change Assyria's trait to choosing a free tech upon city conquest
@@ -382,6 +384,7 @@
 #define MOD_BALANCE_CORE_TOURISM_HUNDREDS		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_TOURISM_HUNDREDS())
 #define MOD_BALANCE_CORE_RANGED_ATTACK_PENALTY	(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_RANGED_ATTACK_PENALTY())
 #define MOD_CORE_DISABLE_LUA_HOOKS				(MOD_COMMUNITY_PATCH && gCustomMods.isCORE_DISABLE_LUA_HOOKS())
+#define MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS	(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS()) // lack of resource will deactivate buildings
 #endif
 
 #define MOD_ISKA_HERITAGE							gCustomMods.isISKA_HERITAGE()
@@ -478,6 +481,8 @@
 #define MOD_BUILDINGS_CITY_WORKING                  gCustomMods.isBUILDINGS_CITY_WORKING()
 // Permit cities to have automaton workers - AFFECTS SAVE GAME DATA FORMAT (v90)
 #define MOD_BUILDINGS_CITY_AUTOMATON_WORKERS        gCustomMods.isBUILDINGS_CITY_AUTOMATON_WORKERS()
+// Allows buildings to be deactivated
+#define MOD_BUILDINGS_DEACTIVATION				    gCustomMods.isBUILDINGS_DEACTIVATION()
 
 // Scales trade routes based on map size and game speed (v52)
 #define MOD_TRADE_ROUTE_SCALING                     gCustomMods.isTRADE_ROUTE_SCALING()
@@ -1433,6 +1438,7 @@ public:
 	MOD_OPT_DECL(GLOBAL_SEPARATE_GP_COUNTERS);
 	MOD_OPT_DECL(GLOBAL_TRULY_FREE_GP);
 	MOD_OPT_DECL(GLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS);
+	MOD_OPT_DECL(GLOBAL_POWER);
 	MOD_OPT_DECL(NO_AUTO_SPAWN_PROPHET);
 	MOD_OPT_DECL(ALTERNATE_ASSYRIA_TRAIT);
 	MOD_OPT_DECL(NO_REPAIR_FOREIGN_LANDS);
@@ -1526,6 +1532,7 @@ public:
 	MOD_OPT_DECL(BALANCE_CORE_TOURISM_HUNDREDS);
 	MOD_OPT_DECL(BALANCE_CORE_RANGED_ATTACK_PENALTY); //this controls whether defense against ranged attacks is weaker when the defender is damaged
 	MOD_OPT_DECL(CORE_DISABLE_LUA_HOOKS);
+	MOD_OPT_DECL(BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS);
 
 	MOD_OPT_DECL(CIV6_WORKER);
 	MOD_OPT_DECL(CIV6_ROADS);
@@ -1574,6 +1581,7 @@ public:
 	MOD_OPT_DECL(BUILDINGS_PRO_RATA_PURCHASE);
 	MOD_OPT_DECL(BUILDINGS_CITY_WORKING);
 	MOD_OPT_DECL(BUILDINGS_CITY_AUTOMATON_WORKERS);
+	MOD_OPT_DECL(BUILDINGS_DEACTIVATION);
 
 	MOD_OPT_DECL(TRADE_ROUTE_SCALING);
 	MOD_OPT_DECL(TRADE_WONDER_RESOURCE_ROUTES);

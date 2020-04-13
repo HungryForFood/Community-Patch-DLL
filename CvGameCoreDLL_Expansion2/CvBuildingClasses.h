@@ -423,6 +423,16 @@ public:
 	const char* GetWonderSplashAudio() const;
 	CvString GetThemingBonusHelp() const;
 
+#if defined(MOD_GLOBAL_POWER)
+	int GetPowerChange() const;
+	bool IsAllowsWaterPowerTransmission() const;
+#endif
+#if defined(MOD_BALANCE_CORE)
+	int GetGoldMaintenanceOnSubsequentCopy() const;
+	bool IsRepeatable() const;
+	int GetMaxNumInCity() const;
+#endif
+
 	// Accessor Functions (Arrays)
 
 #if defined(MOD_DIPLOMACY_CITYSTATES) || defined(MOD_BALANCE_CORE)
@@ -940,6 +950,16 @@ private:
 	CvString m_strWonderSplashAudio;
 	CvString m_strThemingBonusHelp;
 
+#if defined(MOD_GLOBAL_POWER)
+	int m_iPowerChange;
+	bool m_bAllowsWaterPowerTransmission;
+#endif
+#if defined(MOD_BALANCE_CORE)
+	int m_iGoldMaintenanceOnSubsequentCopy;
+	bool m_bRepeatable;
+	int b_iMaxNumInCity;
+#endif
+
 	// Arrays
 
 	int* m_piLockedBuildingClasses;
@@ -1119,6 +1139,12 @@ public:
 	// Accessor functions
 	CvBuildingXMLEntries* GetPossibleBuildings() const;
 
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	// these stuff need to be at the top, so they can be referenced properly
+	typedef std::map<BuildingDeactivationTypes, int> SingleBuildingDeactivationStore; // second int is the number of copies of the building
+	typedef std::map<BuildingTypes, SingleBuildingDeactivationStore> AllBuildingDeactivationStore;
+#endif
+
 	int GetNumBuildings() const;
 	void ChangeNumBuildings(int iChange);
 	int GetNumBuilding(BuildingTypes eIndex) const;
@@ -1162,6 +1188,11 @@ public:
 #endif
 	int GetNumFreeBuilding(BuildingTypes eIndex) const;
 	void SetNumFreeBuilding(BuildingTypes eIndex, int iNewValue);
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	int GetNumDeactivatedBuilding(BuildingTypes eIndex) const;
+	int GetNumDeactivatedBuilding(BuildingTypes eIndex, BuildingDeactivationTypes eDeactivation) const;
+	void SetNumDeactivatedBuilding(BuildingTypes eIndex, BuildingDeactivationTypes eDeactivation, int iNewValue);
+#endif
 #if defined(MOD_BALANCE_CORE)
 	int IsFirstTimeBuilding(BuildingTypes eBuilding);
 	void SetFirstTimeBuilding(BuildingTypes eBuilding, int bValue);
@@ -1235,6 +1266,7 @@ public:
 #if defined(MOD_BALANCE_CORE)
 	const std::vector<BuildingTypes>& GetAllBuildingsHere() const { return m_buildingsThatExistAtLeastOnce; }
 #endif
+
 private:
 	void NotifyNewBuildingStarted(BuildingTypes eIndex);
 
@@ -1254,6 +1286,9 @@ private:
 	int* m_paiBuildingOriginalTime;
 	int* m_paiNumRealBuilding;
 	int* m_paiNumFreeBuilding;
+#if defined(MOD_BALANCE_CORE) && defined(MOD_BUILDINGS_DEACTIVATION)
+	AllBuildingDeactivationStore m_ppiNumDeactivatedBuilding;
+#endif
 #if defined(MOD_BALANCE_CORE)
 	int* m_paiFirstTimeBuilding;
 	int* m_paiThemingBonusIndex;

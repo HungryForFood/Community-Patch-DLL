@@ -787,6 +787,9 @@ CvPlayer::CvPlayer() :
 	m_pCorporations = FNEW(CvPlayerCorporations, c_eCiv5GameplayDLL, 0);
 	m_pContracts = FNEW(CvPlayerContracts, c_eCiv5GameplayDLL, 0);
 #endif
+#if defined(MOD_GLOBAL_POWER)
+	m_pPowerGrids = FNEW(CvPlayerPowerGrids, c_eCiv5GameplayDLL, 0);
+#endif
 	m_pPlayerTechs = FNEW(CvPlayerTechs, c_eCiv5GameplayDLL, 0);
 	m_pFlavorManager = FNEW(CvFlavorManager, c_eCiv5GameplayDLL, 0);
 	m_pTacticalAI = FNEW(CvTacticalAI, c_eCiv5GameplayDLL, 0);
@@ -858,6 +861,9 @@ CvPlayer::~CvPlayer()
 #if defined(MOD_BALANCE_CORE)
 	SAFE_DELETE(m_pCorporations);
 	SAFE_DELETE(m_pContracts);
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	SAFE_DELETE(m_pPowerGrids);
 #endif
 }
 
@@ -1166,6 +1172,9 @@ void CvPlayer::uninit()
 #if defined(MOD_BALANCE_CORE)
 	m_pCorporations->Uninit();
 	m_pContracts->Uninit();
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_pPowerGrids->Uninit();
 #endif
 	m_pEspionage->Uninit();
 	m_pEspionageAI->Uninit();
@@ -2093,6 +2102,9 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 #if defined(MOD_BALANCE_CORE)
 		m_pCorporations->Init(this);
 		m_pContracts->Init(this);
+#endif
+#if defined(MOD_GLOBAL_POWER)
+		m_pPowerGrids->Init(this);
 #endif
 		m_pPlayerTechs->Init(GC.GetGameTechs(), this, false);
 		m_pPlayerPolicies->Init(GC.GetGamePolicies(), this, false);
@@ -11566,6 +11578,17 @@ void CvPlayer::doTurnPostDiplomacy()
 
 	// Compute the cost of policies for this turn
 	DoUpdateNextPolicyCost();
+
+#if defined(MOD_GLOBAL_POWER)
+	if (MOD_GLOBAL_POWER)
+	{
+		if (GET_TEAM(getTeam()).CanUsePower())
+		{
+			GetPowerGrids()->UpdatePowerInPowerGrids();
+		}
+		GetPowerGrids()->DoPowerShortagePenalty();
+	}
+#endif
 
 	// if this is the human player, have the popup come up so that he can choose a new policy
 	if(isAlive() && isHuman() && getNumCities() > 0)
@@ -34161,6 +34184,17 @@ void CvPlayer::setTurnActive(bool bNewValue, bool bDoTurn) // R: bDoTurn default
 					// This block all has things which might change based on city connections changing
 					m_pCityConnections->Update();
 					GetTreasury()->DoUpdateCityConnectionGold();
+#if defined(MOD_GLOBAL_POWER)
+					if (MOD_GLOBAL_POWER)
+					{
+						if (GET_TEAM(getTeam()).CanUsePower())
+						{
+							GetPowerGrids()->UpdateCitiesInPowerGrids();
+							GetPowerGrids()->UpdatePowerInPowerGrids();
+						}
+						GetPowerGrids()->DoPowerShortagePenalty();
+					}
+#endif
 				}
 
 				if(kGame.isFinalInitialized())
@@ -39412,7 +39446,11 @@ int CvPlayer::getBuildingClassMaking(BuildingClassTypes eIndex) const
 
 
 //	--------------------------------------------------------------------------------
+#if defined(MOD_GLOBAL_POWER)
+void CvPlayer::changeBuildingClassMaking(BuildingClassTypes eIndex, int iChange, CvCity* pCity)
+#else
 void CvPlayer::changeBuildingClassMaking(BuildingClassTypes eIndex, int iChange)
+#endif
 {
 	CvAssertMsg(eIndex >= 0, "eIndex is expected to be non-negative (invalid Index)");
 	CvAssertMsg(eIndex < GC.getNumBuildingClassInfos(), "eIndex is expected to be within maximum bounds (invalid Index)");
@@ -39440,6 +39478,21 @@ void CvPlayer::changeBuildingClassMaking(BuildingClassTypes eIndex, int iChange)
 				}
 
 			}
+#if defined(MOD_GLOBAL_POWER)
+			if (MOD_GLOBAL_POWER)
+			{
+				int iPowerRequirement = -pkBuildingInfo->GetPowerChange();
+				if (iPowerRequirement > 0)
+				{
+					pCity->GetCityPower()->ChangePowerConsumptionFromBuildings(iChange * iPowerRequirement);
+					int iPowerGrid = GetPowerGrids()->GetPowerGridID(pCity);
+					if (iPowerGrid > -1)
+					{
+						GetPowerGrids()->UpdatePowerInPowerGrid(iPowerGrid);
+					}
+				}
+			}
+#endif
 		}
 
 
@@ -45450,6 +45503,14 @@ CvPlayerContracts* CvPlayer::GetContracts() const
 }
 #endif
 
+#if defined(MOD_GLOBAL_POWER)
+//	--------------------------------------------------------------------------------
+CvPlayerPowerGrids* CvPlayer::GetPowerGrids() const
+{
+	return m_pPowerGrids;
+}
+#endif
+
 //	--------------------------------------------------------------------------------
 CvReligionAI* CvPlayer::GetReligionAI() const
 {
@@ -45635,6 +45696,9 @@ void CvPlayer::Read(FDataStream& kStream)
 	m_pReligionAI->Read(kStream);
 #if defined(MOD_BALANCE_CORE)
 	m_pCorporations->Read(kStream);
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_pPowerGrids->Read(kStream);
 #endif
 	m_pPlayerTechs->Read(kStream);
 	m_pFlavorManager->Read(kStream);
@@ -45869,6 +45933,9 @@ void CvPlayer::Write(FDataStream& kStream) const
 	m_pReligionAI->Write(kStream);
 #if defined(MOD_BALANCE_CORE)
 	m_pCorporations->Write(kStream);
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	m_pPowerGrids->Write(kStream);
 #endif
 	m_pPlayerTechs->Write(kStream);
 	m_pFlavorManager->Write(kStream);

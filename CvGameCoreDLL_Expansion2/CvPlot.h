@@ -695,6 +695,12 @@ public:
 	void updateYield();
 	void updateYieldFast(CvCity* pOwningCity, const CvReligion* pMajorityReligion, const CvBeliefEntry* pSecondaryPantheon);
 
+#if defined(MOD_GLOBAL_POWER)
+	void updatePowerChange();
+	void updatePowerChange(CvCity* pOwningCity);
+	int getPowerChange() const;
+#endif
+
 	int getYieldWithBuild(BuildTypes eBuild, YieldTypes eYield, bool bWithUpgrade, PlayerTypes ePlayer, const CvCity* pOwningCity, const CvReligion* pMajorityReligion, const CvBeliefEntry* pSecondaryPantheon) const;
 
 	int countNumAirUnits(TeamTypes eTeam, bool bNoSuicide = false) const;
@@ -1067,6 +1073,9 @@ protected:
 	bool* m_abIsImpassable;
 	bool m_bIsTradeUnitRoute;
 	short m_iLastTurnBuildChanged;
+#endif
+#if defined(MOD_GLOBAL_POWER)
+	int m_iPowerChange;
 #endif
     // memory allocated by the plot object itself
 #if defined(MOD_API_EXTENSIONS)
