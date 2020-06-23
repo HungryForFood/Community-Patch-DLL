@@ -256,7 +256,7 @@ public:
 	void SetAllUnitsUnprocessed();
 	void DoUnitReset();
 	void DoUnitAttrition();
-	void RespositionInvalidUnits();
+	void RepositionInvalidUnits();
 	void ResetReachablePlotsForAllUnits();
 
 	void updateYield();
@@ -337,11 +337,7 @@ public:
 
 	void AwardFreeBuildings(CvCity* pCity); // slewis - broken out so that Venice can get free buildings when they purchase something
 
-	void SetNoSettling(int iPlotIndex);
-	bool IsNoSettling(int iPlotIndex) const;
-	void ClearNoSettling();
-
-	bool canFound(int iX, int iY, bool bIgnoreDistanceToExistingCities, bool bIgnoreHappiness, const CvUnit* pUnit) const;
+	bool canFoundExt(int iX, int iY, bool bIgnoreDistanceToExistingCities, bool bIgnoreHappiness) const;
 	bool canFound(int iX, int iY) const;
 
 #if defined(MOD_GLOBAL_RELIGIOUS_SETTLERS) && defined(MOD_BALANCE_CORE)
@@ -487,6 +483,7 @@ public:
 	int getTotalLandScored() const;
 	void changeTotalLandScored(int iChange);
 
+	//name is misleading, should be HappinessFromCityConnections
 	int GetHappinessFromTradeRoutes() const;
 	void DoUpdateCityConnectionHappiness();
 
@@ -582,7 +579,7 @@ public:
 	void ChangeReformationFollowerReduction(int iValue);
 #endif
 
-	void DoYieldsFromKill(CvUnit* pAttackingUnit, CvUnit* pDefendingUnit);
+	void DoYieldsFromKill(CvUnit* pAttackingUnit, CvUnit* pDefendingUnit, CvCity* pCity = NULL);
 
 	void DoTechFromCityConquer(CvCity* pConqueredCity);
 #if defined(MOD_BALANCE_CORE)
@@ -626,6 +623,7 @@ public:
 	void DoUpdateLuxuryHappiness();
 	int GetEmpireHappinessForCity(CvCity* pCity = NULL) const;
 	int GetEmpireUnhappinessForCity(CvCity* pCity = NULL) const;
+	int GetEmpireHappinessFromCities() const;
 	int GetHappiness() const;
 	void SetHappiness(int iNewValue);
 	void SetUnhappiness(int iNewValue);
@@ -1797,6 +1795,12 @@ public:
 #if defined(MOD_API_EXTENSIONS)
 	bool isMajorCiv() const;
 #endif
+#if defined(MOD_DIPLOMACY_CIV4_FEATURES)
+	bool IsVassalOfSomeone() const;
+	int GetNumVassals() const;
+#endif
+	int GetNumValidMajorsMet(bool bJustMetBuffer) const;
+	bool HasMetValidMinorCiv() const;
 	bool IsHasBetrayedMinorCiv() const;
 	void SetHasBetrayedMinorCiv(bool bValue);
 
@@ -2183,7 +2187,7 @@ public:
 
 	int getNumResourceUsed(ResourceTypes eIndex) const;
 	void changeNumResourceUsed(ResourceTypes eIndex, int iChange);
-	int getNumResourceTotal(ResourceTypes eIndex, bool bIncludeImport = true, bool bIncludeMinors = false) const;
+	int getNumResourceTotal(ResourceTypes eIndex, bool bIncludeImport = true) const;
 	int getNumResourcesFromOther(ResourceTypes eIndex) const;
 
 	void changeNumResourceTotal(ResourceTypes eIndex, int iChange, bool bIgnoreResourceWarning = false);
@@ -2228,8 +2232,8 @@ public:
 	int getResourceExport(ResourceTypes eIndex) const;
 	void changeResourceExport(ResourceTypes eIndex, int iChange);
 
-	int getResourceImport(ResourceTypes eIndex) const;
-	void changeResourceImport(ResourceTypes eIndex, int iChange);
+	int getResourceImportFromMajor(ResourceTypes eIndex) const;
+	void changeResourceImportFromMajor(ResourceTypes eIndex, int iChange);
 
 	int getResourceFromMinors(ResourceTypes eIndex) const;
 	void changeResourceFromMinors(ResourceTypes eIndex, int iChange);
@@ -2367,6 +2371,10 @@ public:
 	int getSpecificGreatPersonRateModifierFromMonopoly(GreatPersonTypes eIndex1, MonopolyTypes eIndex2) const;
 	int getSpecificGreatPersonRateModifierFromMonopoly(GreatPersonTypes eIndex1) const;
 	void changeSpecificGreatPersonRateModifierFromMonopoly(GreatPersonTypes eIndex1, MonopolyTypes eIndex2, int iChange);
+
+	int getSpecificGreatPersonRateChangeFromMonopoly(GreatPersonTypes eIndex1, MonopolyTypes eIndex2) const;
+	int getSpecificGreatPersonRateChangeFromMonopoly(GreatPersonTypes eIndex1) const;
+	void changeSpecificGreatPersonRateChangeFromMonopoly(GreatPersonTypes eIndex1, MonopolyTypes eIndex2, int iChange);
 #endif
 
 	int getImprovementYieldChange(ImprovementTypes eIndex1, YieldTypes eIndex2) const;
@@ -2447,7 +2455,7 @@ public:
 	void deleteAIOperation(int iID);
 	bool haveAIOperationOfType(int iOperationType, int* piID=NULL, PlayerTypes eTargetPlayer = NO_PLAYER, CvPlot* pTargetPlot=NULL);
 	int numOperationsOfType(int iOperationType);
-	bool IsCityAlreadyTargeted(CvCity* pCity, DomainTypes eDomain = NO_DOMAIN, int iPercentToTarget = 100, int iIgnoreOperationID = -1, AIOperationTypes eAlreadyActiveOperation = INVALID_AI_OPERATION) const;
+	bool IsCityAlreadyTargeted(CvCity* pCity, DomainTypes eDomain = NO_DOMAIN, int iPercentToTarget = 100, int iIgnoreOperationID = -1, AIOperationTypes eAlreadyActiveOperation = AI_OPERATION_TYPE_INVALID) const;
 
 	int GetNumOffensiveOperations(DomainTypes eDomain);
 
@@ -2458,7 +2466,7 @@ public:
 	bool StopAllSeaOffensiveOperationsAgainstPlayer(PlayerTypes ePlayer, bool bIncludeSneakOps, AIOperationAbortReason eReason);
 
 #if defined(MOD_BALANCE_CORE)
-	bool IsMusterCityAlreadyTargeted(CvCity* pCity, DomainTypes eDomain = NO_DOMAIN, int iPercentToTarget = 100, int iIgnoreOperationID = -1, AIOperationTypes eAlreadyActiveOperation = INVALID_AI_OPERATION) const;
+	bool IsMusterCityAlreadyTargeted(CvCity* pCity, DomainTypes eDomain = NO_DOMAIN, int iPercentToTarget = 100, int iIgnoreOperationID = -1, AIOperationTypes eAlreadyActiveOperation = AI_OPERATION_TYPE_INVALID) const;
 	bool IsPlotTargetedForExplorer(const CvPlot* pPlot, const CvUnit* pIgnoreUnit=NULL) const;
 #endif
 
@@ -2554,6 +2562,7 @@ public:
 	int GetPlotDanger(const CvCity* pCity, const CvUnit* pPretendGarrison = NULL);
 	int GetPlotDanger(const CvPlot& Plot, bool bFixedDamageOnly);
 	void ResetDangerCache(const CvPlot& Plot, int iRange);
+	int GetDangerPlotAge() const;
 	std::vector<CvUnit*> GetPossibleAttackers(const CvPlot& Plot, TeamTypes eTeamForVisibilityCheck);
 
 	bool IsKnownAttacker(const CvUnit* pAttacker);
@@ -2611,9 +2620,9 @@ public:
 	void SetTurnsSinceSettledLastCity(int iValue);
 	void ChangeTurnsSinceSettledLastCity(int iChange);
 
-	int GetBestSettleAreas(int& iFirstArea, int& iSecondArea);
-	CvPlot* GetBestSettlePlot(const CvUnit* pUnit, int iTargetArea, bool bNeedSafe, bool& bIsSafe, CvAIOperation* pOpToIgnore=NULL, bool bForceLogging=false) const;
 	bool HaveGoodSettlePlot(int iAreaID);
+	vector<int> GetBestSettleAreas();
+	CvPlot* GetBestSettlePlot(const CvUnit* pUnit, int iTargetArea, bool& bIsSafe, CvAIOperation* pOpToIgnore=NULL, bool bForceLogging=false) const;
 
 	// New Victory Stuff
 	int GetNumWonders() const;
@@ -2850,7 +2859,7 @@ public:
 #endif
 
 	virtual void computeAveragePlotFoundValue();
-	virtual void updatePlotFoundValues();
+	virtual void UpdatePlotFoundValues();
 	virtual void invalidatePlotFoundValues();
 	virtual int getPlotFoundValue(int iX, int iY);
 	virtual void setPlotFoundValue(int iX, int iY, int iValue);
@@ -3154,7 +3163,6 @@ protected:
 	FAutoVariable<int, CvPlayer> m_iGreatGeneralRateModifier;
 	FAutoVariable<int, CvPlayer> m_iGreatGeneralRateModFromBldgs;
 	FAutoVariable<int, CvPlayer> m_iDomesticGreatGeneralRateModifier;
-	FAutoVariable<int, CvPlayer> m_iDomesticGreatGeneralRateModFromBldgs;
 	FAutoVariable<int, CvPlayer> m_iGreatAdmiralRateModifier;
 	FAutoVariable<int, CvPlayer> m_iGreatWriterRateModifier;
 	FAutoVariable<int, CvPlayer> m_iGreatArtistRateModifier;
@@ -3548,8 +3556,8 @@ protected:
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiNumResourceUsed;
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiNumResourceTotal;
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceGiftedToMinors;
-	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceExport;
-	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceImport;
+	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceExport; //always to majors
+	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceImportFromMajor;
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourceFromMinors;
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiResourcesSiphoned;
 	FAutoVariable<std::vector<int>, CvPlayer> m_paiImprovementCount;
@@ -3618,7 +3626,8 @@ protected:
 	FAutoVariable< std::vector< Firaxis::Array<int, NUM_YIELD_TYPES > >, CvPlayer> m_ppiBuildingClassYieldChange;
 #endif
 #if defined(MOD_API_UNIFIED_YIELDS) && defined(MOD_BALANCE_CORE_RESOURCE_MONOPOLIES)
-	std::map<GreatPersonTypes, std::map<MonopolyTypes, int>> m_ppiSpecificGreatPersonRateModifierFromMonopoly; // Note that m_ppiSpecificGreatPersonRateModifierFromMonopoly does not have to be saved in kStream because setHasGlobalMonopoly and setHasStrategicMonopoly are called on game load
+	std::map<GreatPersonTypes, std::map<MonopolyTypes, int>> m_ppiSpecificGreatPersonRateModifierFromMonopoly;
+	std::map<GreatPersonTypes, std::map<MonopolyTypes, int>> m_ppiSpecificGreatPersonRateChangeFromMonopoly;
 #endif
 	FAutoVariable< std::vector< Firaxis::Array<int, NUM_YIELD_TYPES > >, CvPlayer> m_ppaaiImprovementYieldChange;
 
@@ -3665,9 +3674,6 @@ protected:
 	std::vector<int> m_viPlotFoundValues;
 	int	m_iPlotFoundValuesUpdateTurn;
 #endif
-
-	//plots we have pledged no to settle
-	std::set<int> m_noSettlingPlots;
 
 	// Policies
 	CvPlayerPolicies* m_pPlayerPolicies;

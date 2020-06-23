@@ -122,7 +122,7 @@ int CvDealAI::GetDealPercentLeewayWithAI(PlayerTypes eOtherPlayer) const
 /// How much are we willing to back off on what our perceived value of a deal is with a human player to make something work?
 int CvDealAI::GetDealPercentLeewayWithHuman() const
 {
-	return 5;
+	return 3;
 }
 
 /// Offer up a deal to this AI, and see if he accepts
@@ -1484,8 +1484,8 @@ int CvDealAI::GetGPTforForValueExchange(int iGPTorValue, bool bNumGPTFromValue, 
 
 		iValueTimes100 = (iGPTorValue * iNumTurns);
 
-		//let's assume an interest rate of 0.5% per turn, no compounding
-		int iInterestPercent = 100 * (iNumTurns * 5) / 1000;
+		//let's assume an interest rate of 0.1% per turn, no compounding
+		int iInterestPercent = 100 * (iNumTurns * 1) / 1000;
 
 		//subtract interest. 100 gold now is better than 100 gold in the future
 		iValueTimes100 -= (iValueTimes100*iInterestPercent) / 100;
@@ -1675,30 +1675,34 @@ int CvDealAI::GetLuxuryResourceValue(ResourceTypes eResource, int iNumTurns, boo
 
 		if (GetPlayer()->GetPlayerTraits()->IsImportsCountTowardsMonopolies() && GetPlayer()->GetMonopolyPercent(eResource) < GC.getGame().GetGreatestPlayerResourceMonopolyValue(eResource))
 		{
-			int iNumResourceOwned = GetPlayer()->getNumResourceTotal(eResource, false);
-			int iNumResourceImported = GetPlayer()->getNumResourceTotal(eResource, true, true);
 			//we don't want resources that won't get us a bonus.
-			bool bBad = false;
-			for (int iJ = 0; iJ < NUM_YIELD_TYPES; iJ++)
+			int iNumResourceOwned = GetPlayer()->getNumResourceTotal(eResource, false);
+			int iNumResourceImported = GetPlayer()->getNumResourceTotal(eResource, true);
+			//FIXME: does this make sense?
+			if (iNumResourceOwned == 0 && iNumResourceImported > 0)
 			{
-				if (pkResourceInfo->getYieldChangeFromMonopoly((YieldTypes)iJ) > 0 && iNumResourceOwned <= 0 && iNumResourceImported > 1)
+				bool bBad = false;
+				for (int iJ = 0; iJ < NUM_YIELD_TYPES; iJ++)
 				{
-					bBad = true;
-					
-					if (GET_PLAYER(eOtherPlayer).isHuman())
+					if (pkResourceInfo->getYieldChangeFromMonopoly((YieldTypes)iJ) > 0)
 					{
-						return 5;
-					}
-					else
-					{
-						return INT_MAX;
+						bBad = true;
+
+						if (GET_PLAYER(eOtherPlayer).isHuman())
+						{
+							return 5;
+						}
+						else
+						{
+							return INT_MAX;
+						}
 					}
 				}
-			}
-			if (!bBad)
-			{
-				iItemValue *= (100 + GetPlayer()->GetMonopolyPercent(eResource));
-				iItemValue /= 100;
+				if (!bBad)
+				{
+					iItemValue *= (100 + GetPlayer()->GetMonopolyPercent(eResource));
+					iItemValue /= 100;
+				}
 			}
 		}
 		
@@ -2165,7 +2169,7 @@ int CvDealAI::GetCityValue(int iX, int iY, bool bFromMe, PlayerTypes eOtherPlaye
 			return INT_MAX;
 		}
 		//prevent cheesy exploit: founding cities just to sell them
-		if (GC.getGame().getGameTurn() - pCity->getGameTurnFounded() < 42 + GC.getGame().getSmallFakeRandNum(5,iEconomicValue))
+		if (GC.getGame().getGameTurn() - pCity->getGameTurnFounded() < 42 + GC.getGame().getSmallFakeRandNum(5,iEconomicValue+buyingPlayer.GetID()))
 		{
 			return INT_MAX;
 		}
@@ -3346,7 +3350,7 @@ int CvDealAI::GetThirdPartyPeaceValue(bool bFromMe, PlayerTypes eOtherPlayer, Te
 		}
 		
 		// Not an easy target? Halve the value.
-		if (!pDiploAI->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ false))
+		if (!pDiploAI->IsEasyTarget(eWithPlayer))
 		{
 			iItemValue /= 2;
 		}
@@ -3449,20 +3453,9 @@ int CvDealAI::GetThirdPartyPeaceValue(bool bFromMe, PlayerTypes eOtherPlayer, Te
 		}
 		
 		// Not an easy target? Halve the value.
-		if (GET_PLAYER(eOtherPlayer).isHuman())
+		if (!GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer))
 		{
-			if (!GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ true))
-			{
-				iItemValue /= 2;
-			}
-		}
-		// Assume AIs will share relevant information with each other when deciding on a price.
-		else
-		{
-			if (!GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ false))
-			{
-				iItemValue /= 2;
-			}
+			iItemValue /= 2;
 		}
 	}
 #endif
@@ -3923,7 +3916,7 @@ int CvDealAI::GetThirdPartyWarValue(bool bFromMe, PlayerTypes eOtherPlayer, Team
 			}
 			
 			// Easy target? Halve the value.
-			if (pDiploAI->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ false))
+			if (pDiploAI->IsEasyTarget(eWithPlayer))
 			{
 				iItemValue /= 2;
 			}
@@ -4141,20 +4134,9 @@ int CvDealAI::GetThirdPartyWarValue(bool bFromMe, PlayerTypes eOtherPlayer, Team
 		}
 
 		// Easy target? Halve the value.
-		if (GET_PLAYER(eOtherPlayer).isHuman())
+		if (GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer))
 		{
-			if (GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ true))
-			{
-				iItemValue /= 2;
-			}
-		}
-		// Assume AIs will share relevant information with each other when deciding on a price.
-		else
-		{
-			if (GET_PLAYER(eOtherPlayer).GetDiplomacyAI()->IsEasyTarget(eWithPlayer, /*bOtherPlayerEstimate*/ false))
-			{
-				iItemValue /= 2;
-			}
+			iItemValue /= 2;
 		}
 #endif
 	}
@@ -5089,22 +5071,26 @@ void CvDealAI::DoAddResourceToThem(CvDeal* pDeal, PlayerTypes eThem, bool bDontC
 					{
 						if(GetPlayer()->GetMonopolyPercent(eResource) < GC.getGame().GetGreatestPlayerResourceMonopolyValue(eResource))
 						{
-							int iNumResourceOwned = GetPlayer()->getNumResourceTotal(eResource, false);
-							int iNumResourceImported = GetPlayer()->getNumResourceTotal(eResource, true, true);
 							//we don't want resources that won't get us a bonus.
-							bool bBad = false;
-							for (int iJ = 0; iJ < NUM_YIELD_TYPES; iJ++)
+							int iNumResourceOwned = GetPlayer()->getNumResourceTotal(eResource, false);
+							int iNumResourceImported = GetPlayer()->getNumResourceTotal(eResource, true);
+							//FIXME: does this make sense?
+							if (iNumResourceOwned == 0 && iNumResourceImported > 0)
 							{
-								if (pkResourceInfo->getYieldChangeFromMonopoly((YieldTypes)iJ) > 0 && iNumResourceOwned <= 0 && iNumResourceImported > 0)
+								bool bBad = false;
+								for (int iJ = 0; iJ < NUM_YIELD_TYPES; iJ++)
 								{
-									bBad = true;
-									break;
+									if (pkResourceInfo->getYieldChangeFromMonopoly((YieldTypes)iJ) > 0)
+									{
+										bBad = true;
+										break;
+									}
 								}
-							}
-							if (!bBad)
-							{
-								iItemValue *= (125 + GetPlayer()->GetMonopolyPercent(eResource));
-								iItemValue /= 100;
+								if (!bBad)
+								{
+									iItemValue *= (125 + GetPlayer()->GetMonopolyPercent(eResource));
+									iItemValue /= 100;
+								}
 							}
 						}
 					}
@@ -7020,7 +7006,7 @@ bool CvDealAI::IsMakeOfferForStrategicResource(PlayerTypes eOtherPlayer, CvDeal*
 		if(GET_PLAYER(eOtherPlayer).getNumResourceAvailable(eResource, false) > 0 && GetPlayer()->getNumResourceAvailable(eResource, true) <= 0)
 		{
 			int iNum = GET_PLAYER(eOtherPlayer).getNumResourceAvailable(eResource, false);
-			iRand = GC.getGame().getSmallFakeRandNum(max(iNum, 10), iCurrentNetGoldOfReceivingPlayer + iResourceLoop);
+			iRand = GC.getGame().getSmallFakeRandNum(max(iNum, 10), iCurrentNetGoldOfReceivingPlayer + iResourceLoop + eOtherPlayer);
 			iRand /= 2;
 			if(iRand <= 2)
 			{

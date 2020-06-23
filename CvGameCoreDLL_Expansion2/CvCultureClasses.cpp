@@ -3474,9 +3474,6 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 				if (!GET_PLAYER(pPlot->getOwner()).isMinorCiv() && !GET_PLAYER(pPlot->getOwner()).isBarbarian())
 				{
 					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNegativeArchaeologyPoints(pUnit->getOwner(), 50);
-#if defined(MOD_BALANCE_CORE)
-					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNumArtifactsEverDugUp(pUnit->getOwner(), 1);
-#endif
 				}
 			}
 		}
@@ -3545,9 +3542,6 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 				if (!GET_PLAYER(pPlot->getOwner()).isMinorCiv() && !GET_PLAYER(pPlot->getOwner()).isBarbarian())
 				{
 					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNegativeArchaeologyPoints(pUnit->getOwner(), 50);
-#if defined(MOD_BALANCE_CORE)
-					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNumArtifactsEverDugUp(pUnit->getOwner(), 1);
-#endif
 				}
 			}
 		}
@@ -3617,9 +3611,6 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 				if (!GET_PLAYER(pPlot->getOwner()).isMinorCiv() && !GET_PLAYER(pPlot->getOwner()).isBarbarian())
 				{
 					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNegativeArchaeologyPoints(pUnit->getOwner(), 50);
-#if defined(MOD_BALANCE_CORE)
-					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNumArtifactsEverDugUp(pUnit->getOwner(), 1);
-#endif
 				}
 			}
 		}
@@ -3691,9 +3682,6 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 				if (!GET_PLAYER(pPlot->getOwner()).isMinorCiv() && !GET_PLAYER(pPlot->getOwner()).isBarbarian())
 				{
 					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNegativeArchaeologyPoints(pUnit->getOwner(), 50);
-#if defined(MOD_BALANCE_CORE)
-					GET_PLAYER(pPlot->getOwner()).GetDiplomacyAI()->ChangeNumArtifactsEverDugUp(pUnit->getOwner(), 1);
-#endif
 				}
 			}
 		}
@@ -3726,7 +3714,7 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 	m_pPlayer->SetNumArchaeologyChoices(m_pPlayer->GetNumArchaeologyChoices() - 1);
 	m_pPlayer->GetCulture()->RemoveDigCompletePlot(pPlot);
 #if defined(MOD_BALANCE_CORE)
-	if(m_pPlayer->GetArchaeologicalDigTourism() > 0)
+	if (m_pPlayer->GetArchaeologicalDigTourism() > 0)
 	{
 		int iTourism = m_pPlayer->GetHistoricEventTourism(HISTORIC_EVENT_DIG);
 		m_pPlayer->ChangeNumHistoricEvents(HISTORIC_EVENT_DIG, 1);
@@ -3751,6 +3739,12 @@ void CvPlayerCulture::DoArchaeologyChoice (ArchaeologyChoiceType eChoice)
 			}
 		}
 	}
+#if defined(MOD_BALANCE_CORE_DIFFICULTY)
+	else if (MOD_BALANCE_CORE_DIFFICULTY && !m_pPlayer->isHuman() && m_pPlayer->isMajorCiv() && m_pPlayer->getNumCities() > 0)
+	{
+		m_pPlayer->DoDifficultyBonus(HISTORIC_EVENT_DIG);
+	}
+#endif
 	pPlot->setResourceType(NO_RESOURCE, 0);
 #endif
 }
@@ -5400,6 +5394,7 @@ CvString CvPlayerCulture::GetTourismModifierWithTooltip(PlayerTypes ePlayer) con
 	int iCommonFoeMod = m_pPlayer->GetPlayerPolicies()->GetNumericModifier(POLICYMOD_TOURISM_MOD_COMMON_FOE);
 	if (iCommonFoeMod != 0)
 	{
+		int iTotal = 0;
 		PlayerTypes eLoopPlayer;
 		for(int iPlayerLoop = 0; iPlayerLoop < MAX_MAJOR_CIVS; iPlayerLoop++)
 		{
@@ -5410,10 +5405,12 @@ CvString CvPlayerCulture::GetTourismModifierWithTooltip(PlayerTypes ePlayer) con
 				// Are they at war with me too?
 				if (GET_TEAM(m_pPlayer->getTeam()).isAtWar(GET_PLAYER(eLoopPlayer).getTeam()) && GET_TEAM(kPlayer.getTeam()).isAtWar(GET_PLAYER(eLoopPlayer).getTeam()))
 				{
-					szRtnValue += "[COLOR_POSITIVE_TEXT]" + GetLocalizedText("TXT_KEY_CO_PLAYER_TOURISM_COMMON_FOE", iCommonFoeMod) + "[ENDCOLOR]";
+					iTotal += iCommonFoeMod;
 				}
 			}
 		}
+		if (iTotal != 0)
+			szRtnValue += "[COLOR_POSITIVE_TEXT]" + GetLocalizedText("TXT_KEY_CO_PLAYER_TOURISM_COMMON_FOE", iTotal) + "[ENDCOLOR]";
 	}
 
 	int iLessHappyMod = m_pPlayer->GetPlayerPolicies()->GetNumericModifier(POLICYMOD_TOURISM_MOD_LESS_HAPPY);
@@ -5805,13 +5802,6 @@ int CvPlayerCulture::ComputeWarWeariness()
 		
 		iRisingWarWeariness = (iMostWarTurns * iWarValue) / 100;
 
-		int iMod = m_pPlayer->GetWarWearinessModifier() + m_pPlayer->GetPlayerTraits()->GetWarWearinessModifier();
-		if (iMod > 100)
-			iMod = 100;
-
-		iRisingWarWeariness *= (100 - iMod);
-		iRisingWarWeariness /= 100;
-
 		//simple exponential smoothing
 		float fAlpha = 0.3f;
 		iRisingWarWeariness = int(0.5f + (iRisingWarWeariness * fAlpha) + (iOldWarWeariness * (1 - fAlpha)));
@@ -5826,6 +5816,13 @@ int CvPlayerCulture::ComputeWarWeariness()
 
 	//whichever is worse counts
 	m_iRawWarWeariness = max(iFallingWarWeariness,iRisingWarWeariness);
+
+	int iMod = m_pPlayer->GetWarWearinessModifier() + m_pPlayer->GetPlayerTraits()->GetWarWearinessModifier();
+	if (iMod > 100)
+		iMod = 100;
+
+	m_iRawWarWeariness *= (100 - iMod);
+	m_iRawWarWeariness /= 100;
 
 	if (GC.getLogging() && GC.getAILogging() && m_iRawWarWeariness > 0)
 	{

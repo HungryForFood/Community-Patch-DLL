@@ -91,6 +91,8 @@ public:
 	int GetMovesChange() const;
 	int GetGAUnitPlotExperience() const;
 	FeatureTypes GetCreatedFeature() const;
+	int GetRandomResourceChance() const;
+	bool IsRemovesSelf() const;
 	bool IsNewOwner() const;
 	bool IsOwnerOnly() const;
 #endif
@@ -275,6 +277,8 @@ protected:
 	int m_iUnitPlotExperience;
 	int m_iGAUnitPlotExperience;
 	FeatureTypes m_eCreatesFeature;
+	int m_eRandResourceChance;
+	bool m_eRemovesSelf;
 	bool m_bNewOwner;
 	bool m_bOwnerOnly;
 	int m_iMovesChange;

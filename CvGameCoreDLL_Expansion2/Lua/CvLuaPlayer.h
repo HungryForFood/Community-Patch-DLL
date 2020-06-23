@@ -341,6 +341,7 @@ protected:
 
 	static int lGetEmpireHappinessForCity(lua_State* L);
 	static int lGetEmpireUnhappinessForCity(lua_State* L);
+	static int lGetEmpireHappinessFromCities(lua_State* L);
 	static int lGetHappinessForGAP(lua_State* L);
 
 	static int lGetExcessHappiness(lua_State* L);
@@ -534,6 +535,7 @@ protected:
 	static int lGetNumPolicyBranchesAllowed(lua_State* L);
 	static int lGetNumPolicies(lua_State* L);
 	static int lGetNumPoliciesInBranch(lua_State* L);
+	static int lGetNumPoliciesInBranchForDisplay(lua_State* L);
 	static int lHasPolicy(lua_State* L);
 	static int lSetHasPolicy(lua_State* L);
 	static int lGetNextPolicyCost(lua_State* L);
@@ -650,6 +652,7 @@ protected:
 
 #if defined(MOD_BALANCE_CORE_RESOURCE_MONOPOLIES) && defined(MOD_API_LUA_EXTENSIONS)
 	LUAAPIEXTN(GetMonopolyGreatPersonRateModifier, int);
+	LUAAPIEXTN(GetMonopolyGreatPersonRateChange, int);
 #endif
 
 	static int lGetProductionModifier(lua_State* L);
@@ -1064,11 +1067,8 @@ protected:
 	static int lGetWeDenouncedFriendCount(lua_State* L);
 	static int lIsFriendDeclaredWarOnUs(lua_State* L);
 	static int lGetWeDeclaredWarOnFriendCount(lua_State* L);
-	static int lGetNumRequestsRefused(lua_State* L);
-	//static int lIsWorkingAgainstPlayerAccepted(lua_State* L);
 	static int lGetCoopWarAcceptedState(lua_State* L);
 	static int lGetNumWarsFought(lua_State* L);
-
 	static int lGetLandDisputeLevel(lua_State* L);
 	static int lGetVictoryDisputeLevel(lua_State* L);
 	static int lGetWonderDisputeLevel(lua_State* L);
@@ -1112,7 +1112,6 @@ protected:
 	static int lGetRecentTradeValue(lua_State* L);
 	static int lGetCommonFoeValue(lua_State* L);
 	static int lGetRecentAssistValue(lua_State* L);
-	static int lIsGaveAssistanceTo(lua_State* L);
 	static int lIsHasPaidTributeTo(lua_State* L);
 	static int lIsNukedBy(lua_State* L);
 	static int lIsCapitalCapturedBy(lua_State* L);

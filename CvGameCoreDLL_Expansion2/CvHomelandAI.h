@@ -25,7 +25,7 @@ enum AIHomelandTargetType
 	AI_HOMELAND_TARGET_SENTRY_POINT_NAVAL,
     AI_HOMELAND_TARGET_FORT,
     AI_HOMELAND_TARGET_NAVAL_RESOURCE,
-	AI_HOMELAND_TARGET_HOME_ROAD,
+	AI_HOMELAND_TARGET_WORKER,
 	AI_HOMELAND_TARGET_ANCIENT_RUIN,
 	AI_HOMELAND_TARGET_ANTIQUITY_SITE,
 };
@@ -293,7 +293,7 @@ private:
 
 	void ExecuteWorkerMoves();
 	void ExecuteMovesToSafestPlot();
-	void ExecuteMoveToTarget(CvUnit* pUnit, CvPlot* pTarget, int iFlags, bool bFinishMoves = false);
+	void ExecuteMoveToTarget(CvUnit* pUnit, CvPlot* pTarget, int iFlags, bool bEndTurn = false);
 
 	void ExecuteHeals();
 	void ExecuteWriterMoves();
@@ -323,7 +323,8 @@ private:
 	CvPlot* FindArchaeologistTarget(CvUnit *pUnit);
 
 	void UnitProcessed(int iID);
-	CvPlot* ExecuteWorkerMove(CvUnit* pUnit, const map<CvUnit*,ReachablePlots>* allWorkersReachablePlots = NULL);
+	CvPlot* ExecuteWorkerMove(CvUnit* pUnit);
+	CvPlot* ExecuteWorkerMove(CvUnit* pUnit, const map<CvUnit*,ReachablePlots>& allWorkersReachablePlots);
 	bool ExecuteCultureBlast(CvUnit* pUnit);
 	bool ExecuteGoldenAgeMove(CvUnit* pUnit);
 	bool IsValidExplorerEndTurnPlot(const CvUnit* pUnit, CvPlot* pPlot) const;
@@ -351,6 +352,17 @@ extern const char* homelandMoveNames[];
 extern const char* directiveNames[];
 #endif
 
+struct SPatrolTarget {
+	CvPlot* pTarget;
+	CvPlot* pWorstEnemy; //may be null
+	int iThreatLevel;
+
+	SPatrolTarget();
+	SPatrolTarget(CvPlot* target, CvPlot* neighbor, int iThreat);
+	bool operator<(const SPatrolTarget& rhs) const;
+	bool operator==(const SPatrolTarget& rhs) const;
+};
+
 namespace HomelandAIHelpers
 {
 bool CvHomelandUnitAuxIntSort(const CvHomelandUnit& obj1, const CvHomelandUnit& obj2);
@@ -358,7 +370,7 @@ bool CvHomelandUnitAuxIntReverseSort(const CvHomelandUnit& obj1, const CvHomelan
 
 int ScoreAirBase(CvPlot* pAirBasePlot, PlayerTypes ePlayer, int iRange);
 bool IsGoodUnitMix(CvPlot* pAirBasePlot, CvUnit* pUnit);
-vector< pair<CvPlot*,CvPlot*> > GetPatrolTargets(PlayerTypes ePlayer, bool bWater, int nMaxTargets = 5);
+vector<SPatrolTarget> GetPatrolTargets(PlayerTypes ePlayer, bool bWater, int nMaxTargets = 5);
 }
 
 #endif //CIV5_HOMELAND_AI_H

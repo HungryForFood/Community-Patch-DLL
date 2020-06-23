@@ -30,6 +30,7 @@ REMARK_GROUP("CvDangerPlots");
 CvDangerPlots::CvDangerPlots(void)
 	: m_ePlayer(NO_PLAYER)
 	, m_bDirty(false)
+	, m_iTurnSliceBuilt(0)
 	, m_DangerPlots(NULL)
 {
 }
@@ -63,6 +64,7 @@ void CvDangerPlots::Uninit()
 {
 	m_ePlayer = NO_PLAYER;
 	m_bDirty = false;
+	m_iTurnSliceBuilt = 0;
 	m_DangerPlots.clear();
 	m_knownUnits.clear();
 }
@@ -197,6 +199,7 @@ void CvDangerPlots::UpdateDangerInternal(bool bKeepKnownUnits, const PlotIndexCo
 
 	// important. do this first to avoid recursion
 	m_bDirty = false;
+	m_iTurnSliceBuilt = GC.getGame().getTurnSlice();
 
 	// wipe out values
 	int iGridSize = GC.getMap().numPlots();
@@ -355,7 +358,7 @@ void CvDangerPlots::UpdateDangerInternal(bool bKeepKnownUnits, const PlotIndexCo
 				}
 			}
 
-		pLoopCity->SetThreatValue(iThreatValue);
+		pLoopCity->setThreatValue(iThreatValue);
 	}
 }
 
@@ -409,7 +412,7 @@ void CvDangerPlots::ResetDangerCache(const CvPlot* pCenterPlot, int iRange)
 
 bool CvDangerPlots::IsKnownAttacker(const CvUnit* pUnit) const
 {
-	if (m_DangerPlots.empty()  || !pUnit)
+	if (m_DangerPlots.empty()  || !pUnit || !pUnit->IsCanAttack())
 		return false;
 
 	return m_knownUnits.find(std::make_pair(pUnit->getOwner(), pUnit->GetID())) != m_knownUnits.end();
@@ -417,7 +420,7 @@ bool CvDangerPlots::IsKnownAttacker(const CvUnit* pUnit) const
 
 bool CvDangerPlots::AddKnownAttacker(const CvUnit* pUnit)
 {
-	if (m_DangerPlots.empty()  || !pUnit)
+	if (m_DangerPlots.empty()  || !pUnit || !pUnit->IsCanAttack())
 		return false;
 
 	if (IsKnownAttacker(pUnit))

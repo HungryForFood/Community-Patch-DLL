@@ -239,6 +239,10 @@ public:
 	{
 		m_bIsWater = bWater;
 	};
+	inline DomainTypes GetDomain() const
+	{
+		return m_bIsWater ? DOMAIN_SEA : DOMAIN_LAND;
+	}
 	inline bool IsNavalInvasion() const
 	{
 		return m_bIsNavalInvasion;
@@ -265,7 +269,8 @@ public:
 	const std::vector<int>& GetNeighboringZones() const { return m_vNeighboringZones; }
 	void AddNeighboringZone(int iZoneID);
 	void ClearNeighboringZones() { m_vNeighboringZones.clear(); }
-	int GetBorderScore(CvCity** ppWorstNeighborCity=NULL) const;
+	int GetBorderScore(DomainTypes eDomain, CvCity** ppWorstNeighborCity=NULL) const;
+	bool HasNeighborZone(PlayerTypes eOwner) const;
 #endif
 
 private:
@@ -318,12 +323,12 @@ public:
 	void Invalidate();
 
 	CvTacticalDominanceZone* GetZoneByIndex(int iIndex);
-	CvTacticalDominanceZone* GetZoneByCity(CvCity* pCity, bool bWater);
+	CvTacticalDominanceZone* GetZoneByCity(const CvCity* pCity, bool bWater);
 	CvTacticalDominanceZone* GetZoneByID(int iID);
-	CvTacticalDominanceZone* GetZoneByPlot(CvPlot* pPlot);
+	CvTacticalDominanceZone* GetZoneByPlot(const CvPlot* pPlot);
 
 	int GetDominanceZoneID(int iPlotIndex);
-	bool IsInEnemyDominatedZone(CvPlot* pPlot);
+	bool IsInEnemyDominatedZone(const CvPlot* pPlot);
 	int GetNumZones();
 
 	// quasi-const members

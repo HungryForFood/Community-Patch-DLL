@@ -8509,7 +8509,13 @@ UnitTypes CvGame::GetCompetitiveSpawnUnitType(PlayerTypes ePlayer, bool bInclude
 						bValid = false;
 						break;
 					}
-					
+#if defined(MOD_UNITS_RESOURCE_QUANTITY_TOTALS)
+					if (MOD_UNITS_RESOURCE_QUANTITY_TOTALS && pkUnitInfo->GetResourceQuantityTotal(eResource) > 0)
+					{
+						bValid = false;
+						break;
+					}
+#endif
 				}
 			}
 		}
@@ -9177,6 +9183,7 @@ void CvGame::updateMoves()
 				{
 					if(needsAIUpdate || !player.isHuman())
 					{
+						// ------- this is where the important stuff happens! --------------
 						player.AI_unitUpdate();
 						NET_MESSAGE_DEBUG_OSTR_ALWAYS("UpdateMoves() : player.AI_unitUpdate() called for player " << player.GetID() << " " << player.getName()); 
 					}
@@ -9310,7 +9317,7 @@ void CvGame::updateMoves()
 								{
 									if(pLoopUnit->getOwner() == pLoopUnitInner->getOwner())	// Could be a dying Unit from another player here
 									{
-										if (!pLoopUnit->plot()->CanStackUnitHere(pLoopUnit))
+										if (!pLoopUnit->canEndTurnAtPlot(pLoopUnit->plot()))
 										{
 											if(pLoopUnitInner->IsFortified() && !pLoopUnit->IsFortified())
 											{
@@ -9384,9 +9391,7 @@ void CvGame::updateMoves()
 //	-----------------------------------------------------------------------------------------------
 void CvGame::updateTimers()
 {
-	int iI;
-
-	for(iI = 0; iI < MAX_PLAYERS; iI++)
+	for(int iI = 0; iI < MAX_PLAYERS; iI++)
 	{
 		CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iI);
 		if(kPlayer.isAlive())
@@ -9432,9 +9437,7 @@ void CvGame::UpdatePlayers()
 //	-----------------------------------------------------------------------------------------------
 void CvGame::testAlive()
 {
-	int iI;
-
-	for(iI = 0; iI < MAX_PLAYERS; iI++)
+	for(int iI = 0; iI < MAX_PLAYERS; iI++)
 	{
 		GET_PLAYER((PlayerTypes)iI).verifyAlive();
 	}
@@ -10307,9 +10310,18 @@ unsigned long hash32(unsigned long a)
 	return a;
 }
 
+static unsigned long giLastState = 0;
+
 int CvGame::getSmallFakeRandNum(int iNum, const CvPlot& input)
 {
 	unsigned long iState = input.getX()*17 + input.getY()*23 + getGameTurn()*3;
+
+	/*
+	//safety check
+	if (iState == giLastState)
+		OutputDebugString("warning rng seed repeated\n");
+	giLastState = iState;
+	*/
 	
 	int iResult = 0;
 	if (iNum > 0)
@@ -10317,13 +10329,15 @@ int CvGame::getSmallFakeRandNum(int iNum, const CvPlot& input)
 	else if (iNum < 0)
 		iResult = -int(hash32(iState) % (-iNum));
 
-	//FILogFile* pLog = LOGFILEMGR.GetLog("FakeRandCalls1.csv", FILogFile::kDontTimeStamp);
-	//if (pLog)
-	//{
-	//	char szOut[1024] = { 0 };
-	//	sprintf_s(szOut, "max %d, res %d, seed (%d:%d)\n", iNum, iResult, input.getX(), input.getY());
-	//	pLog->Msg(szOut);
-	//}
+	/*
+	FILogFile* pLog = LOGFILEMGR.GetLog("FakeRandCalls1.csv", FILogFile::kDontTimeStamp);
+	if (pLog)
+	{
+		char szOut[1024] = { 0 };
+		sprintf_s(szOut, "turn %d, max %d, res %d, seed (%d:%d)\n", getGameTurn(), iNum, iResult, input.getX(), input.getY());
+		pLog->Msg(szOut);
+	}
+	*/
 
 	return iResult;
 }
@@ -10332,19 +10346,28 @@ int CvGame::getSmallFakeRandNum(int iNum, int iExtraSeed)
 {
 	unsigned long iState = getGameTurn() + abs(iExtraSeed);
 
+	/*
+	//safety check
+	if (iState == giLastState)
+		OutputDebugString("warning rng seed repeated\n");
+	giLastState = iState;
+	*/
+
 	int iResult = 0;
 	if (iNum > 0)
 		iResult = hash32(iState) % iNum;
 	else if (iNum < 0)
 		iResult = -int(hash32(iState) % (-iNum));
 
-	//FILogFile* pLog = LOGFILEMGR.GetLog("FakeRandCalls2.csv", FILogFile::kDontTimeStamp);
-	//if (pLog)
-	//{
-	//	char szOut[1024] = { 0 };
-	//	sprintf_s(szOut, "max %d, res %d, seed %d\n", iNum, iResult, iExtraSeed);
-	//	pLog->Msg(szOut);
-	//}
+	/*
+	FILogFile* pLog = LOGFILEMGR.GetLog("FakeRandCalls2.csv", FILogFile::kDontTimeStamp);
+	if (pLog)
+	{
+		char szOut[1024] = { 0 };
+		sprintf_s(szOut, "turn %d, max %d, res %d, seed %d\n", getGameTurn(), iNum, iResult, iExtraSeed);
+		pLog->Msg(szOut);
+	}
+	*/
 
 	return iResult;
 }
@@ -10603,6 +10626,72 @@ uint CvGame::getNumReplayMessages() const
 {
 	return m_listReplayMessages.size();
 }
+
+//	--------------------------------------------------------------------------------
+int CvGame::CalculateMedianNumCities()
+{
+	vector<int> v;
+	for (int iPlayerLoop = 0; iPlayerLoop < MAX_MAJOR_CIVS; iPlayerLoop++)
+	{
+		PlayerTypes eLoopPlayer = (PlayerTypes) iPlayerLoop;
+		const CvPlayer& kPlayer = GET_PLAYER(eLoopPlayer);
+		
+		if (kPlayer.isMajorCiv() && kPlayer.isAlive() && kPlayer.getNumCities() > 0)
+			v.push_back(kPlayer.getNumCities());
+	}
+
+	if (v.empty())
+		return 0;
+
+	std::sort(v.begin(), v.end());
+
+	return v[v.size()/2];
+}
+
+//	--------------------------------------------------------------------------------
+int CvGame::CalculateMedianNumPlots()
+{
+	vector<int> v;
+	for (int iPlayerLoop = 0; iPlayerLoop < MAX_MAJOR_CIVS; iPlayerLoop++)
+	{
+		PlayerTypes eLoopPlayer = (PlayerTypes) iPlayerLoop;
+		const CvPlayer& kPlayer = GET_PLAYER(eLoopPlayer);
+		
+		if (kPlayer.isMajorCiv() && kPlayer.isAlive() && kPlayer.getNumCities() > 0)
+			v.push_back(kPlayer.getTotalLand());
+	}
+
+	if (v.empty())
+		return 0;
+
+	std::sort(v.begin(), v.end());
+
+	return v[v.size()/2];
+}
+
+//	--------------------------------------------------------------------------------
+int CvGame::CalculateMedianNumWondersConstructed()
+{
+	vector<int> v;
+	for (int iPlayerLoop = 0; iPlayerLoop < MAX_MAJOR_CIVS; iPlayerLoop++)
+	{
+		PlayerTypes eLoopPlayer = (PlayerTypes) iPlayerLoop;
+		const CvPlayer& kPlayer = GET_PLAYER(eLoopPlayer);
+
+		if (kPlayer.isMajorCiv() && kPlayer.GetWondersConstructed() > 0)
+			v.push_back(kPlayer.GetWondersConstructed());
+	}
+
+	if (v.empty())
+		return 0;
+
+	std::sort(v.begin(), v.end());
+
+	return v[v.size()/2];
+}
+
+
+//	--------------------------------------------------------------------------------
 
 #if defined(MOD_BALANCE_CORE_HAPPINESS)
 void CvGame::updateEconomicTotal()

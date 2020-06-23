@@ -147,17 +147,17 @@ SELECT 'OPINION_WEIGHT_TECH_NONE', '-10';
 
 -- 30
 UPDATE Defines
-SET Value = '45'
+SET Value = '40'
 WHERE Name = 'OPINION_WEIGHT_VICTORY_FIERCE';
 
 -- 20
 UPDATE Defines
-SET Value = '35'
+SET Value = '30'
 WHERE Name = 'OPINION_WEIGHT_VICTORY_STRONG';
 
 -- 10
 UPDATE Defines
-SET Value = '25'
+SET Value = '20'
 WHERE Name = 'OPINION_WEIGHT_VICTORY_WEAK';
 
 -- -6
@@ -171,13 +171,13 @@ SELECT 'OPINION_WEIGHT_VICTORY_PER_ERA', '3';
 
 -- Victory Block Opinion Weights
 INSERT INTO Defines (Name, Value)
-SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_FIERCE', '35';
+SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_FIERCE', '30';
 
 INSERT INTO Defines (Name, Value)
-SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_STRONG', '25';
+SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_STRONG', '20';
 
 INSERT INTO Defines (Name, Value)
-SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_WEAK', '15';
+SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_WEAK', '10';
 
 INSERT INTO Defines (Name, Value)
 SELECT 'OPINION_WEIGHT_VICTORY_BLOCK_NONE', '0';
@@ -236,9 +236,9 @@ UPDATE Defines
 SET Value = '-2'
 WHERE Name = 'OPINION_WEIGHT_EMBASSY';
 
--- -10
+-- -10 (unchanged)
 UPDATE Defines
-SET Value = '-5'
+SET Value = '-10'
 WHERE Name = 'OPINION_WEIGHT_FORGAVE_FOR_SPYING';
 
 -- 20 (unchanged)
@@ -261,46 +261,60 @@ UPDATE Defines
 SET Value = '30'
 WHERE Name = 'OPINION_WEIGHT_CULTURE_BOMBED';
 
--- 2 (unchanged)
--- This is multiplied by the current game era's Diplo Emphasis for Religion.
-UPDATE Defines
-SET Value = '2'
-WHERE Name = 'OPINION_WEIGHT_PER_NEGATIVE_CONVERSION';
-
 -- 5 (unchanged)
--- Religious conversion points are reduced to this number minus 1 when player makes a promise to stop converting AI's cities.
+-- Religious conversion points are reduced to (at minimum) this number minus 1 when player makes a promise to stop converting AI's cities.
 UPDATE Defines
 SET Value = '5'
 WHERE Name = 'RELIGION_DIPLO_HIT_THRESHOLD';
 
+
+-- Religion Diplo Values
+-- These values are multiplied by the current game era's Diplo Emphasis for Religion, except the World Religion Modifier.
+
+-- 2 (unchanged)
+UPDATE Defines
+SET Value = '2'
+WHERE Name = 'OPINION_WEIGHT_PER_NEGATIVE_CONVERSION';
+
 -- -5
--- This is multiplied by the current game era's Diplo Emphasis for Religion.
 UPDATE Defines
 SET Value = '-4'
 WHERE Name = 'OPINION_WEIGHT_ADOPTING_HIS_RELIGION';
 
 -- -3
--- This is multiplied by the current game era's Diplo Emphasis for Religion.
 UPDATE Defines
 SET Value = '-8'
 WHERE Name = 'OPINION_WEIGHT_ADOPTING_MY_RELIGION';
 
--- Different Majority Religions Opinion Weight
--- This is multiplied by the current game era's Diplo Emphasis for Religion.
 INSERT INTO Defines (Name, Value)
-SELECT 'OPINION_WEIGHT_DIFFERENT_MAJORITY_RELIGIONS', '5';
+SELECT 'OPINION_WEIGHT_SAME_MAJORITY_RELIGIONS', '-2';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_DIFFERENT_STATE_RELIGIONS', '5';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_DIFFERENT_MAJORITY_RELIGIONS', '2';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_WORLD_RELIGION_MODIFIER', '150'; -- increases + & - opinion weights by 50% for the World Religion
+
+
+-- Ideology Diplo Values
+-- These values are multiplied by the current game era's Diplo Emphasis for Late Game Policies (aka Ideology), except the World Ideology Modifier.
 
 -- 5
--- This is multiplied by the current game era's Diplo Emphasis for Late Game Policies.
 UPDATE Defines
 SET Value = '-10'
 WHERE Name = 'OPINION_WEIGHT_SAME_LATE_POLICIES';
 
 -- 5
--- This is multiplied by the current game era's Diplo Emphasis for Late Game Policies.
 UPDATE Defines
 SET Value = '10'
 WHERE Name = 'OPINION_WEIGHT_DIFFERENT_LATE_POLICIES';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_WORLD_IDEOLOGY_MODIFIER', '150'; -- increases + & - opinion weights by 50% for the World Ideology
+
 
 -- 20 (unchanged)
 UPDATE Defines
@@ -518,6 +532,9 @@ UPDATE Defines
 SET Value = '10'
 WHERE Name = 'OPINION_WEIGHT_SIDED_WITH_THEIR_MINOR';
 
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_SIDED_WITH_THEIR_MINOR_AGGRESSIVE_MOD', '10';
+
 -- 10 (unchanged)
 UPDATE Defines
 SET Value = '10'
@@ -602,29 +619,42 @@ UPDATE Defines
 SET Value = '35'
 WHERE Name = 'OPINION_WEIGHT_DENOUNCED_THEM';
 
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_MUTUAL_DENOUNCEMENT', '50';
+
+-- Weight for excessive empire expansion
 -- 35
 UPDATE Defines
 SET Value = '20'
 WHERE Name = 'OPINION_WEIGHT_RECKLESS_EXPANDER';
 
 INSERT INTO Defines (Name, Value)
-SELECT 'RECKLESS_EXPANDER_THRESHOLD', '200'; -- % value
+SELECT 'RECKLESS_EXPANDER_CITIES_THRESHOLD', '200'; -- must have at least this % city count compared to the median
+
+INSERT INTO Defines (Name, Value)
+SELECT 'RECKLESS_EXPANDER_LAND_THRESHOLD', '250'; -- OR must have at least this % plot count compared to the median
 
 INSERT INTO Defines (Name, Value)
 SELECT 'OPINION_WEIGHT_RECKLESS_EXPANDER_PER_CITY', '10';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_RECKLESS_EXPANDER_PER_TILE', '1';
 
 INSERT INTO Defines (Name, Value)
 SELECT 'OPINION_WEIGHT_RECKLESS_EXPANDER_STRATEGIC_MOD', '20';
 
 -- Weight for spamming World Wonders
 INSERT INTO Defines (Name, Value)
-SELECT 'WONDER_SPAMMER_THRESHOLD', '3'; -- flat value
+SELECT 'WONDER_SPAMMER_THRESHOLD', '3'; -- must have constructed this many more Wonders than the median (only counting Wonder-building civs)
 
 INSERT INTO Defines (Name, Value)
 SELECT 'OPINION_WEIGHT_WONDER_SPAMMER', '20';
 
 INSERT INTO Defines (Name, Value)
-SELECT 'OPINION_WEIGHT_WONDER_SPAMMER_PER_WONDER', '10';
+SELECT 'OPINION_WEIGHT_WONDER_SPAMMER_PER_WONDER', '5';
+
+INSERT INTO Defines (Name, Value)
+SELECT 'OPINION_WEIGHT_WONDER_SPAMMER_CAP', '60';
 
 INSERT INTO Defines (Name, Value)
 SELECT 'OPINION_WEIGHT_WONDER_SPAMMER_STRATEGIC_MOD', '20';

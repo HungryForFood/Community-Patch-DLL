@@ -70,7 +70,7 @@ void CvAIOperation::Reset(int iID, PlayerTypes eOwner, PlayerTypes eEnemy)
 	m_iID = iID;
 	m_eOwner = eOwner;
 	m_eEnemy = eEnemy;
-	m_eCurrentState = INVALID_AI_OPERATION_STATE;
+	m_eCurrentState = AI_OPERATION_STATE_INVALID;
 	m_eAbortReason = NO_ABORT_REASON;
 
 	m_iTargetX = INVALID_PLOT_COORD;
@@ -1201,7 +1201,7 @@ const char* CvAIOperation::GetInfoString()
 
 	switch(m_eCurrentState)
 	{
-	case INVALID_AI_OPERATION_STATE:
+	case AI_OPERATION_STATE_INVALID:
 		strTemp2 = "Not initialized";
 		break;
 	case AI_OPERATION_STATE_ABORTED:
@@ -1267,7 +1267,7 @@ void CvAIOperation::LogOperationStart() const
 		strOutBuf = strBaseString + strTemp1;
 		switch(m_eCurrentState)
 		{
-		case INVALID_AI_OPERATION_STATE:
+		case AI_OPERATION_STATE_INVALID:
 			strTemp2 = "Not initialized";
 			break;
 		case AI_OPERATION_STATE_ABORTED:
@@ -1343,7 +1343,7 @@ void CvAIOperation::LogOperationStatus(bool bPreTurn) const
 
 		switch(m_eCurrentState)
 		{
-		case INVALID_AI_OPERATION_STATE:
+		case AI_OPERATION_STATE_INVALID:
 			strTemp = "Not initialized";
 			break;
 		case AI_OPERATION_STATE_ABORTED:
@@ -1801,13 +1801,9 @@ MultiunitFormationTypes CvAIOperationCityBasicAttack::GetFormation() const
 /// Allows an outside class to terminate the operation
 void CvAIOperationMilitary::SetToAbort(AIOperationAbortReason eReason)
 {
-#if defined(MOD_BALANCE_CORE)
 	if(eReason == AI_ABORT_LOST_TARGET || eReason == AI_ABORT_NO_ROOM_DEPLOY || eReason == AI_ABORT_NO_MUSTER || eReason == AI_ABORT_LOST_PATH)
-	{
-		/// Clear cached targets so we don't do this over and over.
+		// Clear cached targets so we don't do this over and over.
 		GET_PLAYER(GetOwner()).GetMilitaryAI()->ClearCachedTargets();
-	}
-#endif
 
 	CvAIOperation::SetToAbort(eReason);
 }
@@ -2165,11 +2161,17 @@ void CvAIOperationCivilian::Init(int iID, PlayerTypes eOwner, PlayerTypes /* eEn
 		return;
 	}
 
-	CvPlot* pMusterPlot = pOurCivilian->plot();
-	CvPlot* pTargetSite = FindBestTargetForUnit(pOurCivilian,iAreaID,!IsEscorted());
+	CvPlot* pTargetSite = FindBestTargetForUnit(pOurCivilian,iAreaID);
+	if (!pTargetSite)
+	{
+		SetToAbort(AI_ABORT_NO_TARGET);
+		return;
+	}
+
 	bool bCloseTarget = (pOurCivilian->TurnsToReachTarget(pTargetSite, CvUnit::MOVEFLAG_TURN_END_IS_NEXT_TURN, 1) < 1);
 
 	//don't wait for the escort in the wild (happens with settlers a lot)
+	CvPlot* pMusterPlot = pOurCivilian->plot();
 	if ((IsEscorted() && !pMusterPlot->IsFriendlyTerritory(eOwner)) || 
 		(pOurCivilian->GetDanger(pMusterPlot)>30 && pOurCivilian->GetDanger(pTargetSite)>30))
 	{
@@ -2339,7 +2341,7 @@ bool CvAIOperationCivilian::RetargetCivilian(CvUnit* pCivilian, CvArmyAI* pArmy)
 	CvPlot* pCurrentTarget = GetTargetPlot();
 
 	// Find best target
-	CvPlot* pBetterTarget = FindBestTargetForUnit(pCivilian,pCurrentTarget?pCurrentTarget->getArea():-1,!IsEscorted());
+	CvPlot* pBetterTarget = FindBestTargetForUnit(pCivilian,pCurrentTarget?pCurrentTarget->getArea():-1);
 
 	// No targets at all!
 	if(pBetterTarget == NULL)
@@ -2381,14 +2383,12 @@ bool CvAIOperationCivilianFoundCity::PerformMission(CvUnit* pSettler)
 
 		if(GC.getLogging() && GC.getAILogging())
 		{
-			CvArea* pArea = pCityPlot->area();
 			CvCity* pCity = pCityPlot->getPlotCity();
-
 			if (pCity != NULL)
 			{
 				CvString strMsg;
-				strMsg.Format("City founded (%s), At X=%d, At Y=%d, plot value %d, area value %d", pCity->getName().c_str(), 
-					pCityPlot->getX(), pCityPlot->getY(), pCityPlot->getFoundValue(m_eOwner), pArea->getTotalFoundValue());
+				strMsg.Format("City founded (%s), At X=%d, At Y=%d, plot value %d", pCity->getName().c_str(), 
+					pCityPlot->getX(), pCityPlot->getY(), pCityPlot->getFoundValue(m_eOwner));
 				LogOperationSpecialMessage(strMsg);
 			}
 		}
@@ -2428,7 +2428,7 @@ AIOperationAbortReason CvAIOperationCivilianFoundCity::VerifyOrAdjustTarget(CvAr
 	else
 	{
 		// let's see if the target still makes sense
-		CvPlot* pBetterTarget = FindBestTargetIncludingCurrent(pSettler, !IsEscorted());
+		CvPlot* pBetterTarget = FindBestTargetIncludingCurrent(pSettler, GetTargetPlot()->getArea());
 
 		// No targets at all!
 		if(pBetterTarget == NULL)
@@ -2449,34 +2449,41 @@ AIOperationAbortReason CvAIOperationCivilianFoundCity::VerifyOrAdjustTarget(CvAr
 }
 
 /// Find the plot where we want to settle
-CvPlot* CvAIOperationCivilianFoundCity::FindBestTargetIncludingCurrent(CvUnit* pUnit, bool bOnlySafeTargets)
+CvPlot* CvAIOperationCivilianFoundCity::FindBestTargetIncludingCurrent(CvUnit* pUnit, int iAreaID)
 {
 	//todo: better options
 	//a) return a list of possible targets and find the ones that are currently reachable
 	//b) if the best target is unreachable, move in the general direction and hope the block will clear up
 
-	bool bIsSafe; //dummy
-	int iTargetArea = GetTargetPlot() ? GetTargetPlot()->getArea() : -1;
+	bool bIsSafe = false;
 	//ignore the current operation target when searching. default would be to suppress currently targeted plots
-	CvPlot* pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, iTargetArea, bOnlySafeTargets, bIsSafe, this);
+	CvPlot* pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, iAreaID, bIsSafe, this);
+	if (!bIsSafe && !IsEscorted())
+		pResult = NULL;
 
 	//try again if the result is not good
-	if (pResult == NULL && iTargetArea != -1)
-		pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, -1, bOnlySafeTargets, bIsSafe, this);
+	if (pResult == NULL && iAreaID != -1)
+		pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, -1, bIsSafe, this);
+	if (!bIsSafe && !IsEscorted())
+		pResult = NULL;
 
 	LogSettleTarget("BestWithCurrent", pResult);
 	return pResult;
 }
 
 //need to have this, it's pure virtual in civilian operation
-CvPlot* CvAIOperationCivilianFoundCity::FindBestTargetForUnit(CvUnit* pUnit, int iAreaID, bool bOnlySafeTargets)
+CvPlot* CvAIOperationCivilianFoundCity::FindBestTargetForUnit(CvUnit* pUnit, int iAreaID)
 {
-	bool bIsSafe; //dummy
-	CvPlot* pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, iAreaID, bOnlySafeTargets, bIsSafe);
+	bool bIsSafe = false;
+	CvPlot* pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, iAreaID, bIsSafe);
+	if (!bIsSafe && !IsEscorted())
+		pResult = NULL;
 
 	//try again if the result is not good
 	if (pResult == NULL && iAreaID != -1 )
-		pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, -1, bOnlySafeTargets, bIsSafe);
+		pResult = GET_PLAYER(m_eOwner).GetBestSettlePlot(pUnit, -1, bIsSafe);
+	if (!bIsSafe && !IsEscorted())
+		pResult = NULL;
 
 	LogSettleTarget("BestNew", pResult);
 	return pResult;
@@ -2560,7 +2567,7 @@ bool CvAIOperationCivilianMerchantDelegation::PerformMission(CvUnit* pMerchant)
 }
 
 /// Find the plot where we want to settler
-CvPlot* CvAIOperationCivilianMerchantDelegation::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/, bool /*bOnlySafeTargets*/)
+CvPlot* CvAIOperationCivilianMerchantDelegation::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/)
 {
 	if(!pUnit)
 		return NULL;
@@ -2586,7 +2593,7 @@ CvAIOperationCivilianDiplomatDelegation::~CvAIOperationCivilianDiplomatDelegatio
 }
 
 /// Find the plot where we want to influence
-CvPlot* CvAIOperationCivilianDiplomatDelegation::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/, bool /*bOnlySafeTargets*/)
+CvPlot* CvAIOperationCivilianDiplomatDelegation::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/)
 {
 	if(!pUnit)
 		return NULL;
@@ -2683,7 +2690,7 @@ CvAIOperationCivilianConcertTour::~CvAIOperationCivilianConcertTour()
 }
 
 /// Find the plot where we want to settler
-CvPlot* CvAIOperationCivilianConcertTour::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/, bool /*bOnlySafeTargets*/)
+CvPlot* CvAIOperationCivilianConcertTour::FindBestTargetForUnit(CvUnit* pUnit, int /*iAreaID*/)
 {
 	if(!pUnit)
 		return NULL;
@@ -3001,12 +3008,12 @@ bool CvAIOperationBullyCityState::DoTurn()
 		SPathFinderUserData data(NO_PLAYER, PT_GENERIC_REACHABLE_PLOTS, -1, MINOR_POWER_COMPARISON_RADIUS);
 		ReachablePlots relevantPlots = GC.GetStepFinder().GetPlotsInReach(GetTargetPlot(), data);
 
-		//taken from CalculateBullyMetric
+		//taken from CalculateBullyScore
 		pair<int, int> localPower = TacticalAIHelpers::EstimateLocalUnitPower(relevantPlots, GET_PLAYER(m_eEnemy).getTeam(), GET_PLAYER(m_eOwner).getTeam(), false);
 		int iLocalPowerRatio = int((localPower.second * 100.f) / (localPower.first + GetTargetPlot()->getPlotCity()->GetPower()));
 
 		CvString strMsg;
-		strMsg.Format("%s, local power ratio %d, unit bullying metric %d", GET_PLAYER(m_eEnemy).getName(), iLocalPowerRatio, GET_PLAYER(m_eEnemy).GetMinorCivAI()->CalculateBullyMetric(m_eOwner,true));
+		strMsg.Format("%s, local power ratio %d, unit bullying metric %d", GET_PLAYER(m_eEnemy).getName(), iLocalPowerRatio, GET_PLAYER(m_eEnemy).GetMinorCivAI()->CalculateBullyScore(m_eOwner,true));
 		LogOperationSpecialMessage(strMsg);
 
 		if (GET_PLAYER(m_eEnemy).GetMinorCivAI()->CanMajorBullyUnit(m_eOwner))
@@ -3709,7 +3716,7 @@ AIOperationAbortReason CvAIOperationCivilian::VerifyOrAdjustTarget(CvArmyAI* pAr
 
 bool CvAIOperationCivilian::IsEscorted()
 {
-	if (m_eCurrentState==AI_OPERATION_STATE_RECRUITING_UNITS || m_eCurrentState == INVALID_AI_OPERATION_STATE)
+	if (m_eCurrentState==AI_OPERATION_STATE_RECRUITING_UNITS || m_eCurrentState == AI_OPERATION_STATE_INVALID)
 	{
 		CvMultiUnitFormationInfo* thisFormation = GC.getMultiUnitFormationInfo( GetFormation() );
 
@@ -3959,7 +3966,7 @@ bool OperationalAIHelpers::IsUnitSuitableForRecruitment(CvUnit* pLoopUnit, CvPlo
 		return false;
 
 	//don't recruit if currently healing
-	if (pLoopUnit->shouldHeal())
+	if (pLoopUnit->shouldHeal(false))
 	{
 		/*
 		if (GC.getLogging() && GC.getAILogging())

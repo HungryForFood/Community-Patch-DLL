@@ -54,6 +54,9 @@ inline CvPlayerAI& CvPlayerAI::getPlayer(PlayerTypes ePlayer)
 	CvAssertMsg(ePlayer != NO_PLAYER, "Player is not assigned a valid value");
 	CvAssertMsg(ePlayer < MAX_PLAYERS, "Player is not assigned a valid value");
 
+	if (ePlayer == NO_PLAYER || ePlayer >= MAX_PLAYERS)
+		ePlayer = BARBARIAN_PLAYER;
+
 	return m_aPlayers[ePlayer];
 }
 
@@ -283,9 +286,6 @@ void CvPlayerAI::AI_unitUpdate()
 		return;
 	}
 
-	//so that workers know where to build roads
-	GetBuilderTaskingAI()->Update();
-
 	if(isHuman())
 	{
 		CvUnit::dispatchingNetMessage(true);
@@ -312,13 +312,12 @@ void CvPlayerAI::AI_conquerCity(CvCity* pCity, PlayerTypes eOldOwner, bool bGift
 void CvPlayerAI::AI_conquerCity(CvCity* pCity, PlayerTypes eOldOwner)
 #endif
 {
+	if (isHuman())
+		return;
+
 	PlayerTypes eOriginalOwner = pCity->getOriginalOwner();
 	TeamTypes eOldOwnerTeam = GET_PLAYER(eOldOwner).getTeam();
 #if defined(MOD_BALANCE_CORE)
-	if(isHuman())
-	{
-		return;
-	}
 	//Don't burn down gifts, that makes you look ungrateful.
 	if (bGift && eOriginalOwner != GetID())
 	{
@@ -333,55 +332,30 @@ void CvPlayerAI::AI_conquerCity(CvCity* pCity, PlayerTypes eOldOwner)
 		// minor civ
 		if(GET_PLAYER(eOriginalOwner).isMinorCiv())
 		{
-			if(GetDiplomacyAI()->DoPossibleMinorLiberation(eOriginalOwner, pCity->GetID()))
-				return;
+			// If we're a major civ, decision is made by diplo AI (minors don't liberate other minors)
+			if (isMajorCiv())
+			{
+				if (GetDiplomacyAI()->DoPossibleMinorLiberation(eOriginalOwner, pCity->GetID()))
+					return;
+			}
 		}
-		else // major civ
+		// Original owner is a major civ
+		else
 		{
-			bool bLiberate = false;
-			if (GET_PLAYER(eOriginalOwner).isAlive())
+			// If we're a minor civ, only liberate if they're our ally
+			if (isMinorCiv())
 			{
-				// If the original owner and this player have a defensive pact
-				// and both the original owner and the player are at war with the old owner of this city
-				// give the city back to the original owner
-				TeamTypes eOriginalOwnerTeam = GET_PLAYER(eOriginalOwner).getTeam();
-				if (GET_TEAM(getTeam()).IsHasDefensivePact(eOriginalOwnerTeam) && GET_TEAM(getTeam()).isAtWar(eOldOwnerTeam) && GET_TEAM(eOriginalOwnerTeam).isAtWar(eOldOwnerTeam))
+				if (GetMinorCivAI()->GetAlly() == eOriginalOwner)
 				{
-					bLiberate = true;
-				}
-				// if the player is a friend and we're going for diplo victory, then liberate to score some friend points
-				else if (GetDiplomacyAI()->IsDoFAccepted(eOriginalOwner) && GetDiplomacyAI()->IsGoingForDiploVictory())
-				{
-					bLiberate = true;
+					DoLiberatePlayer(eOriginalOwner, pCity->GetID());
+					return;
 				}
 			}
-			// if the player isn't human and we're going for diplo victory, resurrect players to get super diplo bonuses
-			else if (!GET_PLAYER(eOriginalOwner).isHuman() && GetDiplomacyAI()->IsGoingForDiploVictory())
+			// If we're a major civ, decision is made by diplo AI
+			else if (isMajorCiv())
 			{
-				bLiberate = true;
-			}
-#if defined(MOD_BALANCE_CORE)
-			if(isMinorCiv() && GetMinorCivAI()->GetAlly() == eOriginalOwner)
-			{
-				bLiberate = true;
-			}
-			if(IsEmpireUnhappy() && !GET_TEAM(getTeam()).isAtWar(eOldOwnerTeam) && !GET_TEAM(getTeam()).isAtWar(GET_PLAYER(eOriginalOwner).getTeam()))
-			{
-				if(GET_PLAYER(eOriginalOwner).isMajorCiv() && GetDiplomacyAI()->GetMajorCivOpinion(eOriginalOwner) > MAJOR_CIV_OPINION_FAVORABLE)
-				{
-					bLiberate = true;
-				}
-				if(GET_PLAYER(eOriginalOwner).isMajorCiv() && GET_PLAYER(eOriginalOwner).GetDiplomacyAI()->GetMajorCivOpinion(eOriginalOwner) >= MAJOR_CIV_OPINION_NEUTRAL && GetDiplomacyAI()->GetMajorCivOpinion(eOldOwner) < MAJOR_CIV_OPINION_NEUTRAL)
-				{
-					bLiberate = true;
-				}
-			}
-#endif
-
-			if (bLiberate)
-			{
-				DoLiberatePlayer(eOriginalOwner, pCity->GetID());
-				return;
+				if (GetDiplomacyAI()->DoPossibleMajorLiberation(eOriginalOwner, eOldOwner, pCity))
+					return;
 			}
 		}
 	}
@@ -412,7 +386,7 @@ void CvPlayerAI::AI_conquerCity(CvCity* pCity, PlayerTypes eOldOwner)
 				}
 				else if (eOpinion == MAJOR_CIV_OPINION_ENEMY)
 				{
-					if (GET_TEAM(getTeam()).isAtWar(GET_PLAYER(eOldOwner).getTeam()))
+					if (GET_TEAM(getTeam()).isAtWar(eOldOwnerTeam))
 					{
 						if (GetDiplomacyAI()->GetWarGoal(eOldOwner) == WAR_GOAL_DAMAGE)
 						{
@@ -1547,7 +1521,7 @@ GreatPeopleDirectiveTypes CvPlayerAI::GetDirectiveMerchant(CvUnit* pGreatMerchan
 		else
 		{
 			bool bIsSafe;
-			CvPlot* pSettlePlot = GetBestSettlePlot(pGreatMerchant, -1, false, bIsSafe);
+			CvPlot* pSettlePlot = GetBestSettlePlot(pGreatMerchant, -1, bIsSafe);
 			if (pSettlePlot == NULL)
 				return GREAT_PEOPLE_DIRECTIVE_USE_POWER;
 
@@ -1562,7 +1536,7 @@ GreatPeopleDirectiveTypes CvPlayerAI::GetDirectiveMerchant(CvUnit* pGreatMerchan
 	else if (pGreatMerchant->CanFoundColony())
 	{
 		bool bIsSafe;
-		CvPlot* pPlot = GetBestSettlePlot(pGreatMerchant, -1, false, bIsSafe);
+		CvPlot* pPlot = GetBestSettlePlot(pGreatMerchant, -1, bIsSafe);
 		if (pPlot != NULL)
 			return GREAT_PEOPLE_DIRECTIVE_FIELD_COMMAND;
 	}
@@ -1925,11 +1899,11 @@ CvPlot* CvPlayerAI::FindBestMerchantTargetPlotForCash(CvUnit* pMerchant)
 	if(!pMerchant)
 		return NULL;
 
-	int iBestTurnsToReach = MAX_INT;
-	CvPlot* pBestTargetPlot = NULL;
+	// distance and plot id
+	vector< pair<int,int> > vCandidates;
 
 	// Loop through each city state
-	for(int iI = 0; iI < MAX_PLAYERS; iI++)
+	for (int iI = 0; iI < MAX_PLAYERS; iI++)
 	{
 		CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iI);
 		if (!kPlayer.isMinorCiv() || !kPlayer.isAlive())
@@ -1943,37 +1917,24 @@ CvPlot* CvPlayerAI::FindBestMerchantTargetPlotForCash(CvUnit* pMerchant)
 		bool bMinorCivApproachIsCorrect = (GetDiplomacyAI()->GetMinorCivApproach(kPlayer.GetID()) != MINOR_CIV_APPROACH_CONQUEST);
 		bool bNotPlanningAWar = GetDiplomacyAI()->GetWarGoal(kPlayer.GetID()) == NO_WAR_GOAL_TYPE;
 
-		if(bMinorCivApproachIsCorrect && !kPlayer.IsAtWarWith(GetID()) && bNotPlanningAWar)
+		if (bMinorCivApproachIsCorrect && !kPlayer.IsAtWarWith(GetID()) && bNotPlanningAWar)
 		{
-			// Search all the plots adjacent to this city (since can't enter the minor city plot itself)
-			for(int jJ = 0; jJ < NUM_DIRECTION_TYPES; jJ++)
-			{
-				CvPlot* pAdjacentPlot = plotDirection(pCity->plot()->getX(), pCity->plot()->getY(), ((DirectionTypes)jJ));
-				if(pAdjacentPlot != NULL)
-				{
-					if(!pAdjacentPlot->isValidMovePlot(GetID()))
-						continue;
-					if(!pMerchant->canTrade(pAdjacentPlot))
-						continue;
-
-					// Make sure this is still owned by the city state and is revealed to us and isn't a water tile
-					bool bRightOwner = (pAdjacentPlot->getOwner() == (PlayerTypes)iI);
-					bool bIsRevealed = pAdjacentPlot->isRevealed(getTeam());
-					if(bRightOwner && bIsRevealed)
-					{
-						int iPathTurns = pMerchant->TurnsToReachTarget(pAdjacentPlot, false, false, iBestTurnsToReach);
-						if(iPathTurns < iBestTurnsToReach)
-						{
-							iBestTurnsToReach = iPathTurns;
-							pBestTargetPlot = pAdjacentPlot;
-						}
-					}
-				}
-			}
+			int iDistance = plotDistance(*pCity->plot(), *pMerchant->plot());
+			vCandidates.push_back(make_pair(iDistance, pCity->plot()->GetPlotIndex()));
 		}
 	}
 
-	return pBestTargetPlot;
+	sort(vCandidates.begin(), vCandidates.end());
+
+	int iFlags = CvUnit::MOVEFLAG_NO_ENEMY_TERRITORY | CvUnit::MOVEFLAG_APPROX_TARGET_RING1 | CvUnit::MOVEFLAG_APPROX_TARGET_NATIVE_DOMAIN;
+	for (size_t i = 0; i < vCandidates.size(); i++)
+	{
+		CvPlot* pTarget = GC.getMap().plotByIndexUnchecked(vCandidates[i].second);
+		if (pMerchant->GeneratePath(pTarget, iFlags, 23, NULL, true))
+			return pMerchant->GetPathLastPlot();
+	}
+
+	return NULL;
 }
 
 #if defined(MOD_DIPLOMACY_CITYSTATES)
@@ -2593,75 +2554,25 @@ CvPlot* CvPlayerAI::FindBestMusicianTargetPlot(CvUnit* pMusician)
 	if(!pMusician)
 		return NULL;
 
-	int iBestTurnsToReach = MAX_INT;
-	CvCity* pBestTargetCity = NULL;
-
 	// Find target civ
-	PlayerTypes eTargetPlayer = NO_PLAYER;
-	if(pMusician->isRivalTerritory())
-	{
-		eTargetPlayer = GetCulture()->GetCivLowestInfluence(false /*bCheckOpenBorders*/);
-	}
-	else
-	{
-		eTargetPlayer = GetCulture()->GetCivLowestInfluence(true /*bCheckOpenBorders*/);
-	}
-
+	PlayerTypes eTargetPlayer = GetCulture()->GetCivLowestInfluence(!pMusician->isRivalTerritory()/*bCheckOpenBorders*/);
 	if (eTargetPlayer == NO_PLAYER)
 		return NULL;
 
-	CvPlayer &kTargetPlayer = GET_PLAYER(eTargetPlayer);
+	//try the closest city first
+	int iFlags = CvUnit::MOVEFLAG_NO_ENEMY_TERRITORY | CvUnit::MOVEFLAG_APPROX_TARGET_RING1 | CvUnit::MOVEFLAG_APPROX_TARGET_NATIVE_DOMAIN;
+	CvCity* pTargetCity = GC.getGame().GetClosestCityByPlots(pMusician->plot(), eTargetPlayer);
+	if (pTargetCity && pMusician->GeneratePath(pTargetCity->plot(), iFlags, 23, NULL, true))
+		return pMusician->GetPathLastPlot();
 
-	SPathFinderUserData data(pMusician, CvUnit::MOVEFLAG_NO_ENEMY_TERRITORY, 23);
-	data.ePathType = PT_UNIT_REACHABLE_PLOTS;
-	ReachablePlots reachablePlots = GC.GetPathFinder().GetPlotsInReach(pMusician->getX(), pMusician->getY(), data);
-		
-	// Loop through each of that player's cities
-	int iLoop;
-	for(CvCity *pLoopCity = kTargetPlayer.firstCity(&iLoop); pLoopCity != NULL; pLoopCity = kTargetPlayer.nextCity(&iLoop))
-	{
-		ReachablePlots::iterator it = reachablePlots.find(pLoopCity->plot()->GetPlotIndex());
-		if ( it != reachablePlots.end() )
-		{
-			if( it->iTurns < iBestTurnsToReach)
-			{
-				iBestTurnsToReach = it->iTurns;
-				pBestTargetCity = pLoopCity;
-			}
-		}
-	}
-
-	// Found a city now look at ALL the plots owned by that player near that city
-	if (pBestTargetCity)
-	{
-		int iBestDistance = INT_MAX;
-		CvPlot* pBestPlot = NULL;
-
-		for(int iJ = 0; iJ < pBestTargetCity->GetNumWorkablePlots(); iJ++)
-		{
-			CvPlot *pLoopPlot = iterateRingPlots(pBestTargetCity->getX(), pBestTargetCity->getY(), iJ);
-			if(pLoopPlot != NULL)
-			{
-				// Make sure this is still owned by target and is revealed to us
-				bool bRightOwner = (pLoopPlot->getOwner() == eTargetPlayer);
-				bool bIsRevealed = pLoopPlot->isRevealed(getTeam());
-				if(bRightOwner && bIsRevealed)
-				{
-					int iDistance = ::plotDistance(pLoopPlot->getX(),pLoopPlot->getY(),pMusician->getX(),pMusician->getY());
-					if(iDistance < iBestDistance)
-					{
-						iBestDistance = iDistance;
-						pBestPlot = pLoopPlot;
-					}
-				}
-			}	
-		}
-
-		return pBestPlot;
-	}
+	//fallback, try the capital
+	pTargetCity = GET_PLAYER(eTargetPlayer).getCapitalCity();
+	if (pTargetCity && pMusician->GeneratePath(pTargetCity->plot(), iFlags, 23, NULL, true))
+		return pMusician->GetPathLastPlot();
 
 	return NULL;
 }
+
 CvPlot* CvPlayerAI::FindBestCultureBombPlot(CvUnit* pUnit, BuildTypes eBuild, const std::vector<CvPlot*>& vPlotsToAvoid, bool bMustBeWorkable)
 {
 	if (!pUnit)
@@ -2762,32 +2673,12 @@ CvPlot* CvPlayerAI::FindBestCultureBombPlot(CvUnit* pUnit, BuildTypes eBuild, co
 
 			// make sure we don't step on the wrong toes
 			const PlayerTypes eOwner = pAdjacentPlot->getOwner();
-			if (eOwner != NO_PLAYER && eOwner != m_eID )
+			if (eOwner != NO_PLAYER && eOwner != BARBARIAN_PLAYER && eOwner != m_eID)
 			{
-				if(GET_PLAYER(eOwner).isMinorCiv())
+				if (GetDiplomacyAI()->IsPlayerBadTheftTarget(eOwner, THEFT_TYPE_CULTURE_BOMB))
 				{
-					MinorCivApproachTypes eMinorApproach = GetDiplomacyAI()->GetMinorCivApproach(eOwner);
-					// if we're friendly or protective, don't be a jerk
-					if(eMinorApproach == MINOR_CIV_APPROACH_FRIENDLY || eMinorApproach == MINOR_CIV_APPROACH_PROTECTIVE)
-					{
-						bGoodCandidate = false;
-						break;
-					}
-				}
-				else
-				{
-					MajorCivApproachTypes eMajorApproach = GetDiplomacyAI()->GetMajorCivApproach(eOwner, false);
-					DisputeLevelTypes eLandDisputeLevel = GetDiplomacyAI()->GetLandDisputeLevel(eOwner);
-
-					bool bTicked = (eMajorApproach <= MAJOR_CIV_APPROACH_GUARDED);
-					bool bTickedAboutLand = (eLandDisputeLevel >= DISPUTE_LEVEL_STRONG);
-
-					// only bomb if we're hostile
-					if(!bTicked && !bTickedAboutLand)
-					{
-						bGoodCandidate = false;
-						break;
-					}
+					bGoodCandidate = false;
+					break;
 				}
 			}
 
@@ -2855,44 +2746,29 @@ CvPlot* CvPlayerAI::FindBestCultureBombPlot(CvUnit* pUnit, BuildTypes eBuild, co
 			//Let's grab embassies if we can!
 			if (pAdjacentPlot->IsImprovementEmbassy())
 			{
-				iWeightFactor += 5;
+				if (GET_PLAYER(pAdjacentPlot->GetPlayerThatBuiltImprovement()).getTeam() != GET_PLAYER(pUnit->getOwner()).getTeam())
+					iWeightFactor += 5;
+				else //don't steal our own embassy
+					iWeightFactor = 1;
 			}
 
 			const PlayerTypes eOtherPlayer = pAdjacentPlot->getOwner();
-			if (eOtherPlayer != NO_PLAYER && eOtherPlayer != GetID())
+			if (eOtherPlayer != NO_PLAYER && eOtherPlayer != BARBARIAN_PLAYER && eOtherPlayer != GetID())
 			{
-				if(GET_PLAYER(eOtherPlayer).isMinorCiv())
+				if (GetDiplomacyAI()->IsPlayerBadTheftTarget(eOtherPlayer, THEFT_TYPE_CULTURE_BOMB))
 				{
-					MinorCivApproachTypes eMinorApproach = GetDiplomacyAI()->GetMinorCivApproach(eOtherPlayer);
-					// if we're friendly or protective, don't count the tile (but accept it as collateral damage)
-					if(eMinorApproach == MINOR_CIV_APPROACH_FRIENDLY || eMinorApproach == MINOR_CIV_APPROACH_PROTECTIVE)
-					{
-						continue;
-					}
-					else
-					{
-						// grabbing tiles away from minors is nice
-						iWeightFactor += 3;
-					}
+					iScore = 0;
+					break;
+				}
+				else if (GET_PLAYER(eOtherPlayer).isMinorCiv())
+				{
+					// grabbing tiles away from minors is nice
+					iWeightFactor += 3;
 				}
 				else
 				{
-					MajorCivApproachTypes eMajorApproach = GetDiplomacyAI()->GetMajorCivApproach(eOtherPlayer, false);
-					DisputeLevelTypes eLandDisputeLevel = GetDiplomacyAI()->GetLandDisputeLevel(eOtherPlayer);
-
-					bool bTicked = (eMajorApproach <= MAJOR_CIV_APPROACH_GUARDED);
-					bool bTickedAboutLand = (eLandDisputeLevel >= DISPUTE_LEVEL_STRONG);
-
-					// don't count the tile if we're not hostile (but accept it as collateral damage)
-					if(!bTicked && !bTickedAboutLand)
-					{
-						continue;
-					}
-					else
-					{
-						// grabbing tiles away from majors is really nice
-						iWeightFactor += 4;
-					}
+					// grabbing tiles away from majors is really nice
+					iWeightFactor += 4;
 				}
 			}
 

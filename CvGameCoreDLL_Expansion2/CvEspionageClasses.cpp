@@ -2709,6 +2709,20 @@ CvString CvPlayerEspionage::GetSpyChanceAtCity(CvCity* pCity, uint uiSpyIndex, b
 			//City Rank:
 			if (MOD_BALANCE_CORE_SPIES_ADVANCED)
 			{
+
+				bool bCanDie = false;
+				if (pCity->GetCityEspionage()->HasCounterSpy())
+				{
+					int iCounterspyIndex = GET_PLAYER(pCity->getOwner()).GetEspionage()->GetSpyIndexInCity(pCity);
+
+					int iHeat = 2 - GET_PLAYER(pCity->getOwner()).GetEspionage()->m_aSpyList[iCounterspyIndex].GetSpyRank(pCity->getOwner());
+
+					if (iHeat < pSpy->GetAdvancedActions())
+					{
+						bCanDie = true;
+					}
+				}
+
 				strSpyAtCity += "[NEWLINE][NEWLINE]";
 
 				strSpyAtCity += GetLocalizedText("TXT_KEY_DEFENSIVE_SPY_POTENTIAL_AA");
@@ -2721,8 +2735,8 @@ CvString CvPlayerEspionage::GetSpyChanceAtCity(CvCity* pCity, uint uiSpyIndex, b
 				iSpyTotal += (pSpy->GetSpyRank(m_pPlayer->GetID()) + 1) * iSpyRankPower;
 				iSpyTotal -= iCityValue;
 
-				int iKillChance = (((iSpyTotal - iChancetoKillAA) * 100) / iSpyTotal);
-				int iIdentifyChance = (((iChancetoKillAA - iChancetoIdentifyAA) * 100) / iSpyTotal);
+				int iKillChance = (((iSpyTotal - (bCanDie ? iChancetoKillAA : 0)) * 100) / iSpyTotal);
+				int iIdentifyChance = ((((bCanDie ? iChancetoKillAA - iChancetoIdentifyAA : iChancetoIdentifyAA)) * 100) / iSpyTotal);
 				//Remainder
 				int iDetectChance = (100 - iKillChance - iIdentifyChance);
 
@@ -9755,8 +9769,8 @@ void CvEspionageAI::BuildOffenseCityList(EspionageCityList& aOffenseCityList)
 				}
 				if (GET_PLAYER(eTargetPlayer).isMajorCiv())
 				{
-					// if we promised not to spy, make it less likely that we will spy
-					if (pDiploAI->IsPlayerStopSpyingRequestAccepted(eTargetPlayer))
+					// if we promised not to spy or it's a bad idea to spy on them, make it less likely that we will spy
+					if (pDiploAI->IsPlayerBadTheftTarget(eTargetPlayer, THEFT_TYPE_SPY))
 					{
 						// target far less frequently
 						iDiploModifier -= 750;
@@ -9836,11 +9850,7 @@ void CvEspionageAI::BuildOffenseCityList(EspionageCityList& aOffenseCityList)
 				CvGameReligions* pReligions = GC.getGame().GetGameReligions();
 				const CvReligion* pMyReligion = pReligions->GetReligion(eReligion, m_pPlayer->GetID());
 
-				CvCity* pHolyCity = NULL;
-				CvPlot* pPlot = GC.getMap().plot(pMyReligion->m_iHolyCityX, pMyReligion->m_iHolyCityY);
-				if (pPlot != NULL)
-					pHolyCity = pPlot->getPlotCity();
-
+				CvCity* pHolyCity = pMyReligion->GetHolyCity();
 				iDiploModifier += pMyReligion->m_Beliefs.GetHappinessFromForeignSpies(m_pPlayer->GetID(), pHolyCity, true) * 25;
 			}
 

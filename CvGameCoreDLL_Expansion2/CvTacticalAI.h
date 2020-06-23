@@ -297,22 +297,23 @@ class CvTacticalPosture
 public:
 	CvTacticalPosture(PlayerTypes ePlayer, bool bIsWater, int iCityID, AITacticalPosture ePosture)
 	{
-		m_iPlayerWaterInfo = (int)ePlayer * 2 + (int)bIsWater;
-		m_iCityID = iCityID;
+		m_ePlayer = ePlayer;
+		//same scheme as for tactical zones - water is negative
+		m_iCityID = bIsWater ? -iCityID : iCityID;
 		m_ePosture = ePosture;
 	}
 
 	PlayerTypes GetPlayer() const
 	{
-		return (PlayerTypes)(m_iPlayerWaterInfo / 2);
+		return m_ePlayer;
 	};
 	bool IsWater()
 	{
-		return m_iPlayerWaterInfo & 0x1;
+		return (m_iCityID<0);
 	};
 	int GetCityID()
 	{
-		return m_iCityID;
+		return abs(m_iCityID);
 	};
 	AITacticalPosture GetPosture()
 	{
@@ -320,7 +321,7 @@ public:
 	};
 
 private:
-	int m_iPlayerWaterInfo;
+	PlayerTypes m_ePlayer;
 	int m_iCityID;
 	AITacticalPosture m_ePosture;
 };
@@ -486,7 +487,6 @@ public:
 	void Write(FDataStream& kStream);
 
 	// Public turn update routines
-	void CommandeerUnits();
 	void Update();
 
 	// Temporary dominance zones
@@ -517,6 +517,8 @@ public:
 	void UnitProcessed(int iID);
 private:
 
+	void RecruitUnits();
+
 	// Internal turn update routines - commandeered unit processing
 	AITacticalPosture SelectPosture(CvTacticalDominanceZone* pZone, AITacticalPosture eLastPosture);
 	void FindTacticalTargets();
@@ -540,7 +542,7 @@ private:
 	void PlotHealMoves(bool bFirstPass);
 	void PlotBarbarianAttacks();
 	void PlotBarbarianCampDefense();
-	void PlotBarbarianMoves();
+	void PlotBarbarianRoaming();
 
 ///------------------------------
 //	unify these?
@@ -570,7 +572,7 @@ private:
 	void ReviewUnassignedUnits();
 
 	// Operational AI support functions
-	bool ClearEnemiesNearArmy(CvArmyAI* pArmy);
+	bool CheckForEnemiesNearArmy(CvArmyAI* pArmy);
 	void ExecuteGatherMoves(CvArmyAI* pArmy, CvPlot* pTurnTarget);
 
 	// Routines to process and sort targets
@@ -594,16 +596,16 @@ private:
 	void ExecutePlunderTradeUnit(CvPlot* pTargetPlot);
 	void ExecuteParadropPillage(CvPlot* pTargetPlot);
 	void ExecuteLandingOperation(CvPlot* pTargetPlot);
-	bool ExecuteSpotterMove(CvPlot* pTargetPlot);
+	bool ExecuteSpotterMove(vector<CvUnit*> vUnits, CvPlot* pTargetPlot);
 	bool ExecuteAttackWithUnits(CvPlot* pTargetPlot, eAggressionLevel eAggLvl);
-	bool PositionUnitsAroundTarget(CvPlot* pTargetPlot);
+	bool PositionUnitsAroundTarget(vector<CvUnit*> vUnits, CvPlot* pTargetPlot);
 	void ExecuteAirSweep(CvPlot* pTargetPlot);
 	void ExecuteAirAttack(CvPlot* pTargetPlot);
 	CvPlot* FindAirTargetNearTarget(CvUnit* pUnit, CvPlot* pTargetPlot);
 	void ExecuteRepositionMoves();
 	void ExecuteMovesToSafestPlot();
 	void ExecuteHeals(bool bFirstPass);
-	void ExecuteBarbarianMoves();
+	void ExecuteBarbarianRoaming();
 	bool ExecuteMoveToPlot(CvUnit* pUnit, CvPlot* pTarget, bool bSaveMoves = false, int iFlags = 0);
 	bool ExecuteMoveOfBlockingUnit(CvUnit* pUnit, CvPlot* pPreferredDirection=NULL);
 	void ExecuteNavalBlockadeMove(CvPlot* pTarget);
@@ -635,12 +637,10 @@ private:
 
 	bool MoveToEmptySpaceNearTarget(CvUnit* pUnit, CvPlot* pTargetPlot, DomainTypes eDomain, int iMaxTurns, bool bMustBeSafePath = false);
 
-	CvPlot* FindBestBarbarianLandMove(CvUnit* pUnit);
-	CvPlot* FindPassiveBarbarianLandMove(CvUnit* pUnit);
-	CvPlot* FindBestBarbarianSeaMove(CvUnit* pUnit);
+	CvPlot* FindBestBarbarianLandTarget(CvUnit* pUnit);
+	CvPlot* FindBestBarbarianSeaTarget(CvUnit* pUnit);
 	CvPlot* FindBarbarianExploreTarget(CvUnit* pUnit);
-	CvPlot* FindBarbarianGankTradeRouteTarget(CvUnit* pUnit);
-	CvPlot* FindNearbyTarget(CvUnit* pUnit, int iMaxTurns, AITacticalTargetType eType = AI_TACTICAL_TARGET_NONE, bool bAllowDefensiveTargets=false);
+	CvPlot* FindNearbyTarget(CvUnit* pUnit, int iMaxTurns, bool bOffensive);
 	bool NearVisibleEnemy(CvUnit* pUnit, int iRange);
 	bool UseThisDominanceZone(CvTacticalDominanceZone* pZone);
 	bool IsVeryHighPriorityCivilianTarget(CvTacticalTarget* pTarget);
@@ -868,8 +868,8 @@ public:
 	bool isEnemyCivilian() const { return bEnemyCivilianPresent; }
 
 	bool isEdgePlot() const { return bEdgeOfTheKnownWorld; }
-	bool isNextToCitadel() const { return bAdjacentToEnemyCitadel; }
-	void setNextToCitadel(bool bValue) { bAdjacentToEnemyCitadel = bValue; }
+	bool isNextToEnemyCitadel() const { return bAdjacentToEnemyCitadel; }
+	void setNextToEnemyCitadel(bool bValue) { bAdjacentToEnemyCitadel = bValue; }
 	bool hasAirCover() const { return bHasAirCover; }
 	bool isVisibleToEnemy() const { return bIsVisibleToEnemy; }
 	bool isBlockedForCombatUnit() const { return bBlockedForCombatUnit; }

@@ -116,8 +116,6 @@
 #define AUI_RELIGION_FIX_SCORE_BELIEF_AT_CITY_RIVER_HAPPINESS
 /// Scales the non-spaceship scoring of Great Engineers with Wonder Competitiveness
 #define AUI_RELIGION_GET_DESIRED_FAITH_GREAT_PERSON_ENGINEER_USES_WONDER_COMPETITIVENESS (100.0 / 3.0)
-/// Fixes the bug where the AI scores inquisitors if it already has enough, not when it needs them
-#define AUI_RELIGION_FIX_GET_DESIRED_FAITH_GREAT_PERSON_INQUISITOR_CHECK
 /// When comparing the final score for beliefs, the score of the lowest scored belief will be subtracted from all beliefs
 #define AUI_RELIGION_RELATIVE_BELIEF_SCORE
 /// Since Venice can purchase stuff at puppets, the function will no longer treat Venice's puppets as ordinary puppets
@@ -268,6 +266,8 @@
 #define MOD_GLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS	gCustomMods.isGLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS()
 // Adds a power system, similar to civ 6, with some minor differences
 #define MOD_GLOBAL_POWER							gCustomMods.isGLOBAL_POWER()
+// Various new tables and logics for improvements
+#define MOD_IMPROVEMENTS_EXTENSIONS					gCustomMods.isIMPROVEMENTS_EXTENSIONS()
 // No auto spawn great prophets for human players, must select pulldown menu in Lua when you are ready to spawn one, only pre-Industrial era
 #define MOD_NO_AUTO_SPAWN_PROPHET					gCustomMods.isNO_AUTO_SPAWN_PROPHET()
 // Change Assyria's trait to choosing a free tech upon city conquest
@@ -362,6 +362,7 @@
 #define MOD_BALANCE_CORE_NEW_GP_ATTRIBUTES			(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_NEW_GP_ATTRIBUTES())
 #define MOD_BALANCE_CORE_JFD						(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_JFD())
 #define MOD_BALANCE_CORE_MILITARY_RESISTANCE		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_MILITARY_RESISTANCE())
+#define MOD_BALANCE_CORE_MILITARY_RESOURCES			(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_MILITARY_RESOURCES()) // lack of strategic resources causes units to be unable to heal, rather than decrease their combat strength
 #define MOD_BALANCE_CORE_PANTHEON_RESET_FOUND		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_PANTHEON_RESET_FOUND())
 #define MOD_BALANCE_CORE_VICTORY_GAME_CHANGES		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_VICTORY_GAME_CHANGES())
 #define MOD_BALANCE_CORE_EVENTS						(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_EVENTS())
@@ -383,12 +384,15 @@
 #define MOD_BALANCE_CORE_TOURISM_HUNDREDS		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_TOURISM_HUNDREDS())
 #define MOD_BALANCE_CORE_TOURISM_HUNDREDS		(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_TOURISM_HUNDREDS())
 #define MOD_BALANCE_CORE_RANGED_ATTACK_PENALTY	(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_RANGED_ATTACK_PENALTY())
+#define MOD_BALANCE_CORE_INQUISITOR_TWEAKS	(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_INQUISITOR_TWEAKS())
 #define MOD_CORE_DISABLE_LUA_HOOKS				(MOD_COMMUNITY_PATCH && gCustomMods.isCORE_DISABLE_LUA_HOOKS())
 #define MOD_BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS	(MOD_COMMUNITY_PATCH && gCustomMods.isBALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS()) // lack of resource will deactivate buildings
 #endif
 
 #define MOD_ISKA_HERITAGE							gCustomMods.isISKA_HERITAGE()
 #define MOD_ISKA_PANTHEONS							gCustomMods.isISKA_PANTHEONS()
+#define MOD_ISKA_GAMEOPTIONS						gCustomMods.isISKA_GAMEOPTIONS()
+#define MOD_ISKA_GOLDENAGEPOINTS_TO_PRESTIGE		gCustomMods.isISKA_GOLDENAGEPOINTS_TO_PRESTIGE()
 
 // activate eureka for tech cost bonus 'quest'
 #define MOD_CIV6_EUREKA								gCustomMods.isCIV6_EUREKAS()
@@ -498,6 +502,8 @@
 #define MOD_UNITS_XP_TIMES_100                      gCustomMods.isUNITS_XP_TIMES_100()
 // Hovering unit can only heal over land
 #define MOD_UNITS_HOVERING_LAND_ONLY_HEAL           gCustomMods.isUNITS_HOVERING_LAND_ONLY_HEAL()
+// Enables the table Unit_ResourceQuantityTotals - AFFECTS SAVE GAME DATA FORMAT
+#define MOD_UNITS_RESOURCE_QUANTITY_TOTALS			gCustomMods.isUNITS_RESOURCE_QUANTITY_TOTALS()
 
 // Removes religion preference
 #define MOD_RELIGION_NO_PREFERRENCES                gCustomMods.isRELIGION_NO_PREFERRENCES()
@@ -734,6 +740,10 @@
 //   GameEvents.UnitUpgraded.Add(function(iPlayer, iOldUnit, iNewUnit, bGoodyHut) end)
 #define MOD_EVENTS_UNIT_UPGRADES                    gCustomMods.isEVENTS_UNIT_UPGRADES()
 
+// Events sent as units are converted (wherever CvUnit::convert() is called, eg upgrade or barbarian capture)
+//   GameEvents.UnitConverted.Add(function(iOldPlayer, iNewPlayer, iOldUnit, iNewUnit, bIsUpgrade) return true end)
+#define MOD_EVENTS_UNIT_CONVERTS                    gCustomMods.isEVENTS_UNIT_CONVERTS()
+
 // Events sent as units are created (v51)
 //   GameEvents.UnitCanHaveName.Add(function(iPlayer, iUnit, iName) return true end)
 //   GameEvents.UnitCanHaveGreatWork.Add(function(iPlayer, iUnit, iGreatWork) return true end)
@@ -930,8 +940,6 @@
 #define MOD_BUGFIX_NAVAL_FREE_UNITS                 gCustomMods.isBUGFIX_NAVAL_FREE_UNITS()
 // Fixes the bug where the naval units jump to the nearest city and not the nearest available non-lake water plot
 #define MOD_BUGFIX_NAVAL_NEAREST_WATER              gCustomMods.isBUGFIX_NAVAL_NEAREST_WATER()
-// Enable legacy special treatment of human units with regards to minor territory
-#define MOD_CORE_HUMANS_MAY_END_TURN_IN_CS_PLOTS	gCustomMods.isCORE_HUMANS_MAY_END_TURN_IN_CS_PLOTS()
 // Fixes the bug in goody hut messages that have parameters (v38)
 #define MOD_BUGFIX_GOODY_HUT_MESSAGES               (true)
 // Fixes the bug where Barb Camps ignore the ValidTerrains and ValidFeatures tables
@@ -1248,6 +1256,7 @@ enum BattleTypeTypes
 #define GAMEEVENT_UnitPromoted					"UnitPromoted",					"iii"
 #define GAMEEVENT_UnitRangeAttackAt				"UnitRangeAttackAt",			"iiii"
 #define GAMEEVENT_UnitUpgraded					"UnitUpgraded",					"iiib"
+#define GAMEEVENT_UnitConverted					"UnitConverted",				"iiiib"
 #define GAMEEVENT_IdeologyAdopted				"IdeologyAdopted",				"ii"
 #define GAMEEVENT_IdeologySwitched				"IdeologySwitched",				"iii"
 //JFD
@@ -1439,6 +1448,7 @@ public:
 	MOD_OPT_DECL(GLOBAL_TRULY_FREE_GP);
 	MOD_OPT_DECL(GLOBAL_PURCHASE_FAITH_BUILDINGS_IN_PUPPETS);
 	MOD_OPT_DECL(GLOBAL_POWER);
+	MOD_OPT_DECL(IMPROVEMENTS_EXTENSIONS);
 	MOD_OPT_DECL(NO_AUTO_SPAWN_PROPHET);
 	MOD_OPT_DECL(ALTERNATE_ASSYRIA_TRAIT);
 	MOD_OPT_DECL(NO_REPAIR_FOREIGN_LANDS);
@@ -1511,6 +1521,7 @@ public:
 	MOD_OPT_DECL(BALANCE_CORE_NEW_GP_ATTRIBUTES);
 	MOD_OPT_DECL(BALANCE_CORE_JFD);
 	MOD_OPT_DECL(BALANCE_CORE_MILITARY_RESISTANCE);
+	MOD_OPT_DECL(BALANCE_CORE_MILITARY_RESOURCES);
 	MOD_OPT_DECL(BALANCE_CORE_PANTHEON_RESET_FOUND);
 	MOD_OPT_DECL(BALANCE_CORE_VICTORY_GAME_CHANGES);
 	MOD_OPT_DECL(BALANCE_CORE_EVENTS);
@@ -1531,6 +1542,7 @@ public:
 	MOD_OPT_DECL(BALANCE_CORE_BOMBARD_RANGE_BUILDINGS);
 	MOD_OPT_DECL(BALANCE_CORE_TOURISM_HUNDREDS);
 	MOD_OPT_DECL(BALANCE_CORE_RANGED_ATTACK_PENALTY); //this controls whether defense against ranged attacks is weaker when the defender is damaged
+	MOD_OPT_DECL(BALANCE_CORE_INQUISITOR_TWEAKS);
 	MOD_OPT_DECL(CORE_DISABLE_LUA_HOOKS);
 	MOD_OPT_DECL(BALANCE_CORE_RESOURCE_DEACTIVATES_BUILDINGS);
 
@@ -1592,6 +1604,7 @@ public:
 	MOD_OPT_DECL(UNITS_LOCAL_WORKERS);
 	MOD_OPT_DECL(UNITS_HOVERING_LAND_ONLY_HEAL);
 	MOD_OPT_DECL(UNITS_HOVERING_COASTAL_ATTACKS);
+	MOD_OPT_DECL(UNITS_RESOURCE_QUANTITY_TOTALS);
 
 	MOD_OPT_DECL(RELIGION_NO_PREFERRENCES);
 	MOD_OPT_DECL(RELIGION_RANDOMISE);
@@ -1666,6 +1679,7 @@ public:
 	MOD_OPT_DECL(EVENTS_CAN_MOVE_INTO);
 	MOD_OPT_DECL(EVENTS_UNIT_ACTIONS);
 	MOD_OPT_DECL(EVENTS_UNIT_UPGRADES);
+	MOD_OPT_DECL(EVENTS_UNIT_CONVERTS);
 	MOD_OPT_DECL(EVENTS_UNIT_DATA);
 	MOD_OPT_DECL(EVENTS_TRADE_ROUTES);
 	MOD_OPT_DECL(EVENTS_TRADE_ROUTE_PLUNDERED);
@@ -1708,7 +1722,6 @@ public:
 	MOD_OPT_DECL(BUGFIX_FREE_FOOD_BUILDING);
 	MOD_OPT_DECL(BUGFIX_NAVAL_FREE_UNITS);
 	MOD_OPT_DECL(BUGFIX_NAVAL_NEAREST_WATER);
-	MOD_OPT_DECL(CORE_HUMANS_MAY_END_TURN_IN_CS_PLOTS);
 	MOD_OPT_DECL(BUGFIX_BARB_CAMP_TERRAINS);
 	MOD_OPT_DECL(BUGFIX_BARB_CAMP_SPAWNING);
 	MOD_OPT_DECL(BUGFIX_BARB_GP_XP);
@@ -1729,6 +1742,8 @@ public:
 
 	MOD_OPT_DECL(ISKA_HERITAGE);
 	MOD_OPT_DECL(ISKA_PANTHEONS);
+	MOD_OPT_DECL(ISKA_GAMEOPTIONS);
+	MOD_OPT_DECL(ISKA_GOLDENAGEPOINTS_TO_PRESTIGE);
 
 	MOD_OPT_DECL(BATTLE_ROYALE);
 

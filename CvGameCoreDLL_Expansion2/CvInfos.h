@@ -1013,7 +1013,7 @@ public:
 	int getAIFreeXPPercent() const;
 	int getNumGoodies() const;
 #if defined(MOD_BALANCE_CORE)
-	int getAIResistanceCap() const;
+	int getResistanceCap() const;
 	int getAIDifficultyBonusBase() const;
 	int getAIDifficultyBonusEarly() const;
 	int getAIDifficultyBonusMid() const;
@@ -1632,6 +1632,7 @@ public:
 	int getMonopolyDefenseBonus(MonopolyTypes eMonopoly) const;
 
 	int getMonopolyGreatPersonRateModifier(SpecialistTypes eSpecialist, MonopolyTypes eMonopoly) const;
+	int getMonopolyGreatPersonRateChange(SpecialistTypes eSpecialist, MonopolyTypes eMonopoly) const;
 #endif
 #if defined(MOD_RESOURCES_PRODUCTION_COST_MODIFIERS)
 	bool isHasUnitCombatProductionCostModifiersLocal() const;
@@ -1718,6 +1719,7 @@ protected:
 	int* m_piCityYieldModFromMonopoly;
 	std::map<ResourceMonopolySettings, CombatModifiers> m_piiMonopolyCombatModifiers;
 	std::map<MonopolyGreatPersonRateModifierKey, int> m_piMonopolyGreatPersonRateModifiers;
+	std::map<MonopolyGreatPersonRateModifierKey, int> m_piMonopolyGreatPersonRateChanges;
 #endif
 #if defined(MOD_RESOURCES_PRODUCTION_COST_MODIFIERS)
 	std::map<int, std::vector<ProductionCostModifiers>> m_piiiUnitCombatProductionCostModifiersLocal;

@@ -3759,12 +3759,8 @@ bool CityStrategyAIHelpers::IsTestCityStrategy_CapitalUnderThreat(CvCity* pCity)
 		if (!bAtPeace && !kPlayer.isMinorCiv())
 		{
 			CvCity *pMostThreatened = kPlayer.GetThreatenedCityByRank();
-#if defined(MOD_BALANCE_CORE_MILITARY)
 			//threat value is now calculated differently
 			if (pMostThreatened == pCity && pMostThreatened->getThreatValue() > GC.getCITY_HIT_POINTS_HEALED_PER_TURN()*2)
-#else
-			if (pMostThreatened == pCity && pMostThreatened->getThreatValue() > 200)
-#endif
 			{
 				return true;
 			}
@@ -4158,6 +4154,15 @@ bool CityStrategyAIHelpers::IsTestCityStrategy_GoodGPCity(CvCity* pCity)
 						iGPPChange += pReligion->m_Beliefs.GetGreatPersonPoints(GetGreatPersonFromSpecialist(eSpecialist), pCity->getOwner(), pCity, true) * 100;
 					}
 				}
+
+#if defined(MOD_BALANCE_CORE_RESOURCE_MONOPOLIES) && defined(MOD_API_LUA_EXTENSIONS)
+				// GPP from resource monopolies
+				GreatPersonTypes eGreatPerson = GetGreatPersonFromSpecialist(eSpecialist);
+				if (eGreatPerson != NO_GREATPERSON)
+				{
+					iGPPChange += pCity->GetPlayer()->getSpecificGreatPersonRateChangeFromMonopoly(eGreatPerson) * 100;
+				}
+#endif
 
 				if (iGPPChange > 0)
 				{

@@ -524,11 +524,12 @@ void CvBarbarians::DoCamps()
 				iNumCampsInExistence++;
 			}
 
-			//Discount all owned plots.
-			if (pLoopPlot->getOwner() != NO_PLAYER)
+			//No water obviously
+			if(pLoopPlot->isWater() || !pLoopPlot->isValidMovePlot(BARBARIAN_PLAYER))
 				continue;
 
-			if(pLoopPlot->isWater() || !pLoopPlot->isValidMovePlot(BARBARIAN_PLAYER))
+			//Discount all owned plots.
+			if (pLoopPlot->isOwned() || pLoopPlot->isAdjacentOwned())
 				continue;
 
 			// No camps on 1-tile islands
@@ -560,7 +561,7 @@ void CvBarbarians::DoCamps()
 			if (vAllPlots.size()>1)
 			{
 				//do one iteration of a fisher-yates shuffle
-				int iSwap = kGame.isReallyNetworkMultiPlayer() ? vAllPlots.size() / 2 : kGame.getSmallFakeRandNum(vAllPlots.size(), *pLoopPlot);
+				int iSwap = kGame.isReallyNetworkMultiPlayer() ? vAllPlots.size() / 2 : kGame.getSmallFakeRandNum(vAllPlots.size(), pLoopPlot->GetPlotIndex()+vAllPlots.size());
 				std::swap(vAllPlots[iSwap],vAllPlots.back());
 			}
 #endif
@@ -573,7 +574,7 @@ void CvBarbarians::DoCamps()
 				if (vCoastalPlots.size()>1)
 				{
 					//do one iteration of a fisher-yates shuffle
-					int iSwap = kGame.isReallyNetworkMultiPlayer() ? vCoastalPlots.size() / 2 : kGame.getSmallFakeRandNum(vCoastalPlots.size(), *pLoopPlot);
+					int iSwap = kGame.isReallyNetworkMultiPlayer() ? vCoastalPlots.size() / 2 : kGame.getSmallFakeRandNum(vCoastalPlots.size(), pLoopPlot->GetPlotIndex()+vCoastalPlots.size());
 					std::swap(vCoastalPlots[iSwap],vCoastalPlots.back());
 				}
 #endif
@@ -847,6 +848,19 @@ UnitTypes CvBarbarians::GetRandomBarbarianUnitType(CvPlot* pPlot, UnitAITypes eU
 						iValue += 100;
 						break;
 					}
+
+#if defined(MOD_UNITS_RESOURCE_QUANTITY_TOTALS)
+					if (MOD_UNITS_RESOURCE_QUANTITY_TOTALS)
+					{
+						int iNumResourceTotal = GC.getUnitInfo(eLoopUnit)->GetResourceQuantityTotal(eResource);
+
+						if (iNumResourceTotal > 0)
+						{
+							iValue += 100;
+							break;
+						}
+					}
+#endif
 				}
 			}
 
